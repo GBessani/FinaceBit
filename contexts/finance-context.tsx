@@ -1,53 +1,110 @@
 "use client"
 
 import * as React from "react"
-import { FinancialData, Transaction, Category, Goal, FixedBill, ScheduledTransaction } from "@/lib/types"
+import { createClient } from "@/lib/supabase/client"
 import {
-  getInitialData,
-  addTransaction as addTx,
-  updateTransaction as updateTx,
-  deleteTransaction as deleteTx,
-  addCategory as addCat,
-  deleteCategory as deleteCat,
-  addGoal as addG,
-  updateGoal as updateG,
-  deleteGoal as deleteG,
-  addFixedBill as addFB,
-  updateFixedBill as updateFB,
-  deleteFixedBill as deleteFB,
-  addScheduledTransaction as addST,
-  updateScheduledTransaction as updateST,
-  deleteScheduledTransaction as deleteST,
-} from "@/lib/storage"
+  FinancialData,
+  Transaction,
+  Category,
+  Goal,
+  FixedBill,
+  ScheduledTransaction,
+} from "@/lib/types"
+import { User } from "@supabase/supabase-js"
+
+function mapCategory(row: Record<string, unknown>): Category {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    icon: row.icon as string,
+    color: row.color as string,
+    type: row.type as "income" | "expense",
+  }
+}
+
+function mapTransaction(row: Record<string, unknown>): Transaction {
+  return {
+    id: row.id as string,
+    description: row.description as string,
+    amount: Number(row.amount),
+    type: row.type as "income" | "expense",
+    categoryId: (row.category_id as string) ?? "",
+    date: (row.date as string).substring(0, 10),
+    notes: row.notes as string | undefined,
+  }
+}
+
+function mapGoal(row: Record<string, unknown>): Goal {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    targetAmount: Number(row.target_amount),
+    currentAmount: Number(row.current_amount),
+    deadline: (row.deadline as string).substring(0, 10),
+    color: row.color as string,
+  }
+}
+
+function mapFixedBill(row: Record<string, unknown>): FixedBill {
+  return {
+    id: row.id as string,
+    description: row.description as string,
+    amount: Number(row.amount),
+    type: row.type as "income" | "expense",
+    categoryId: (row.category_id as string) ?? "",
+    dueDay: row.due_day as number,
+    recurrence: row.recurrence as FixedBill["recurrence"],
+    isActive: row.is_active as boolean,
+    notes: row.notes as string | undefined,
+  }
+}
+
+function mapScheduledTransaction(row: Record<string, unknown>): ScheduledTransaction {
+  return {
+    id: row.id as string,
+    description: row.description as string,
+    amount: Number(row.amount),
+    type: row.type as "income" | "expense",
+    categoryId: (row.category_id as string) ?? "",
+    scheduledDate: (row.scheduled_date as string).substring(0, 10),
+    isCompleted: row.is_completed as boolean,
+    notes: row.notes as string | undefined,
+  }
+}
 
 interface FinanceContextType {
   data: FinancialData
   isLoaded: boolean
-  addTransaction: (transaction: Transaction) => void
-  updateTransaction: (transaction: Transaction) => void
-  deleteTransaction: (id: string) => void
-  addCategory: (category: Category) => void
-  deleteCategory: (id: string) => void
-  addGoal: (goal: Goal) => void
-  updateGoal: (goal: Goal) => void
-  deleteGoal: (id: string) => void
-  addFixedBill: (bill: FixedBill) => void
-  updateFixedBill: (bill: FixedBill) => void
-  deleteFixedBill: (id: string) => void
-  addScheduledTransaction: (transaction: ScheduledTransaction) => void
-  updateScheduledTransaction: (transaction: ScheduledTransaction) => void
-  deleteScheduledTransaction: (id: string) => void
+  user: User | null
+  addTransaction: (transaction: Transaction) => Promise<void>
+  updateTransaction: (transaction: Transaction) => Promise<void>
+  deleteTransaction: (id: string) => Promise<void>
+  addCategory: (category: Category) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
+  addGoal: (goal: Goal) => Promise<void>
+  updateGoal: (goal: Goal) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
+  addFixedBill: (bill: FixedBill) => Promise<void>
+  updateFixedBill: (bill: FixedBill) => Promise<void>
+  deleteFixedBill: (id: string) => Promise<void>
+  addScheduledTransaction: (transaction: ScheduledTransaction) => Promise<void>
+  updateScheduledTransaction: (transaction: ScheduledTransaction) => Promise<void>
+  deleteScheduledTransaction: (id: string) => Promise<void>
   getCategory: (id: string) => Category | undefined
   getTotalIncome: (month?: string) => number
   getTotalExpenses: (month?: string) => number
   getBalance: (month?: string) => number
   getUpcomingBills: () => FixedBill[]
   getUpcomingScheduled: () => ScheduledTransaction[]
+  signOut: () => Promise<void>
 }
 
 const FinanceContext = React.createContext<FinanceContextType | undefined>(undefined)
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
+  const supabase = React.useMemo(() => createClient(), [])
+
+  const [user, setUser] = React.useState<User | null>(null)
   const [data, setData] = React.useState<FinancialData>({
     transactions: [],
     categories: [],
@@ -57,186 +114,187 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   })
   const [isLoaded, setIsLoaded] = React.useState(false)
 
-  React.useEffect(() => {
-    setData(getInitialData())
+  const loadData = React.useCallback(async (userId: string) => {
+    const [cats, txs, goals, bills, scheduled] = await Promise.all([
+      supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
+      supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("fixed_bills").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("scheduled_transactions").select("*").eq("user_id", userId).order("scheduled_date"),
+    ])
+
+    setData({
+      categories: (cats.data ?? []).map(mapCategory),
+      transactions: (txs.data ?? []).map(mapTransaction),
+      goals: (goals.data ?? []).map(mapGoal),
+      fixedBills: (bills.data ?? []).map(mapFixedBill),
+      scheduledTransactions: (scheduled.data ?? []).map(mapScheduledTransaction),
+    })
     setIsLoaded(true)
-  }, [])
+  }, [supabase])
 
-  const addTransaction = React.useCallback((transaction: Transaction) => {
-    setData((prev) => addTx(prev, transaction))
-  }, [])
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) loadData(user.id)
+      else setIsLoaded(true)
+    })
 
-  const updateTransaction = React.useCallback((transaction: Transaction) => {
-    setData((prev) => updateTx(prev, transaction))
-  }, [])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) loadData(u.id)
+    })
 
-  const deleteTransaction = React.useCallback((id: string) => {
-    setData((prev) => deleteTx(prev, id))
-  }, [])
+    return () => subscription.unsubscribe()
+  }, [supabase, loadData])
 
-  const addCategory = React.useCallback((category: Category) => {
-    setData((prev) => addCat(prev, category))
-  }, [])
+  const addTransaction = React.useCallback(async (t: Transaction) => {
+    if (!user) return
+    const { data: row } = await supabase.from("transactions").insert({
+      user_id: user.id, description: t.description, amount: t.amount,
+      type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, transactions: [mapTransaction(row), ...prev.transactions] }))
+  }, [user, supabase])
 
-  const deleteCategory = React.useCallback((id: string) => {
-    setData((prev) => deleteCat(prev, id))
-  }, [])
+  const updateTransaction = React.useCallback(async (t: Transaction) => {
+    const { data: row } = await supabase.from("transactions").update({
+      description: t.description, amount: t.amount, type: t.type,
+      category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
+    }).eq("id", t.id).select().single()
+    if (row) setData(prev => ({ ...prev, transactions: prev.transactions.map(x => x.id === t.id ? mapTransaction(row) : x) }))
+  }, [supabase])
 
-  const addGoal = React.useCallback((goal: Goal) => {
-    setData((prev) => addG(prev, goal))
-  }, [])
+  const deleteTransaction = React.useCallback(async (id: string) => {
+    await supabase.from("transactions").delete().eq("id", id)
+    setData(prev => ({ ...prev, transactions: prev.transactions.filter(t => t.id !== id) }))
+  }, [supabase])
 
-  const updateGoal = React.useCallback((goal: Goal) => {
-    setData((prev) => updateG(prev, goal))
-  }, [])
+  const addCategory = React.useCallback(async (c: Category) => {
+    if (!user) return
+    const { data: row } = await supabase.from("categories").insert({
+      user_id: user.id, name: c.name, icon: c.icon, color: c.color, type: c.type,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, categories: [...prev.categories, mapCategory(row)] }))
+  }, [user, supabase])
 
-  const deleteGoal = React.useCallback((id: string) => {
-    setData((prev) => deleteG(prev, id))
-  }, [])
+  const deleteCategory = React.useCallback(async (id: string) => {
+    await supabase.from("categories").delete().eq("id", id)
+    setData(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }))
+  }, [supabase])
 
-  const addFixedBill = React.useCallback((bill: FixedBill) => {
-    setData((prev) => addFB(prev, bill))
-  }, [])
+  const addGoal = React.useCallback(async (g: Goal) => {
+    if (!user) return
+    const { data: row } = await supabase.from("goals").insert({
+      user_id: user.id, name: g.name, target_amount: g.targetAmount,
+      current_amount: g.currentAmount, deadline: g.deadline, color: g.color,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, goals: [...prev.goals, mapGoal(row)] }))
+  }, [user, supabase])
 
-  const updateFixedBill = React.useCallback((bill: FixedBill) => {
-    setData((prev) => updateFB(prev, bill))
-  }, [])
+  const updateGoal = React.useCallback(async (g: Goal) => {
+    const { data: row } = await supabase.from("goals").update({
+      name: g.name, target_amount: g.targetAmount, current_amount: g.currentAmount,
+      deadline: g.deadline, color: g.color,
+    }).eq("id", g.id).select().single()
+    if (row) setData(prev => ({ ...prev, goals: prev.goals.map(x => x.id === g.id ? mapGoal(row) : x) }))
+  }, [supabase])
 
-  const deleteFixedBill = React.useCallback((id: string) => {
-    setData((prev) => deleteFB(prev, id))
-  }, [])
+  const deleteGoal = React.useCallback(async (id: string) => {
+    await supabase.from("goals").delete().eq("id", id)
+    setData(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }))
+  }, [supabase])
 
-  const addScheduledTransaction = React.useCallback((transaction: ScheduledTransaction) => {
-    setData((prev) => addST(prev, transaction))
-  }, [])
+  const addFixedBill = React.useCallback(async (b: FixedBill) => {
+    if (!user) return
+    const { data: row } = await supabase.from("fixed_bills").insert({
+      user_id: user.id, description: b.description, amount: b.amount, type: b.type,
+      category_id: b.categoryId || null, due_day: b.dueDay, recurrence: b.recurrence,
+      is_active: b.isActive, notes: b.notes ?? null,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, mapFixedBill(row)] }))
+  }, [user, supabase])
 
-  const updateScheduledTransaction = React.useCallback((transaction: ScheduledTransaction) => {
-    setData((prev) => updateST(prev, transaction))
-  }, [])
+  const updateFixedBill = React.useCallback(async (b: FixedBill) => {
+    const { data: row } = await supabase.from("fixed_bills").update({
+      description: b.description, amount: b.amount, type: b.type,
+      category_id: b.categoryId || null, due_day: b.dueDay, recurrence: b.recurrence,
+      is_active: b.isActive, notes: b.notes ?? null,
+    }).eq("id", b.id).select().single()
+    if (row) setData(prev => ({ ...prev, fixedBills: prev.fixedBills.map(x => x.id === b.id ? mapFixedBill(row) : x) }))
+  }, [supabase])
 
-  const deleteScheduledTransaction = React.useCallback((id: string) => {
-    setData((prev) => deleteST(prev, id))
-  }, [])
+  const deleteFixedBill = React.useCallback(async (id: string) => {
+    await supabase.from("fixed_bills").delete().eq("id", id)
+    setData(prev => ({ ...prev, fixedBills: prev.fixedBills.filter(b => b.id !== id) }))
+  }, [supabase])
 
-  const getCategory = React.useCallback(
-    (id: string) => data.categories.find((c) => c.id === id),
-    [data.categories]
-  )
+  const addScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
+    if (!user) return
+    const { data: row } = await supabase.from("scheduled_transactions").insert({
+      user_id: user.id, description: t.description, amount: t.amount, type: t.type,
+      category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
+      is_completed: t.isCompleted, notes: t.notes ?? null,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, scheduledTransactions: [...prev.scheduledTransactions, mapScheduledTransaction(row)] }))
+  }, [user, supabase])
 
-  const filterByMonth = React.useCallback(
-    (transactions: Transaction[], month?: string) => {
-      if (!month) return transactions
-      return transactions.filter((t) => t.date.startsWith(month))
-    },
-    []
-  )
+  const updateScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
+    const { data: row } = await supabase.from("scheduled_transactions").update({
+      description: t.description, amount: t.amount, type: t.type,
+      category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
+      is_completed: t.isCompleted, notes: t.notes ?? null,
+    }).eq("id", t.id).select().single()
+    if (row) setData(prev => ({ ...prev, scheduledTransactions: prev.scheduledTransactions.map(x => x.id === t.id ? mapScheduledTransaction(row) : x) }))
+  }, [supabase])
 
-  const getFixedBillsForMonth = React.useCallback(
-    (month?: string) => {
-      if (!month) return data.fixedBills.filter((b) => b.isActive)
-      
-      const [year, monthNum] = month.split("-").map(Number)
-      const today = new Date()
-      const targetDate = new Date(year, monthNum - 1, 1)
-      
-      return data.fixedBills.filter((b) => {
-        if (!b.isActive) return false
-        
-        // Para meses futuros ou atual, inclui contas fixas ativas
-        if (targetDate >= new Date(today.getFullYear(), today.getMonth(), 1)) {
-          return true
-        }
-        
-        // Para meses passados, assume que as contas fixas existiam
-        return true
-      })
-    },
-    [data.fixedBills]
-  )
+  const deleteScheduledTransaction = React.useCallback(async (id: string) => {
+    await supabase.from("scheduled_transactions").delete().eq("id", id)
+    setData(prev => ({ ...prev, scheduledTransactions: prev.scheduledTransactions.filter(t => t.id !== id) }))
+  }, [supabase])
 
-  const getTotalIncome = React.useCallback(
-    (month?: string) => {
-      const filteredTransactions = filterByMonth(data.transactions, month)
-      const transactionIncome = filteredTransactions
-        .filter((t) => t.type === "income")
-        .reduce((sum, t) => sum + t.amount, 0)
-      
-      const fixedIncome = getFixedBillsForMonth(month)
-        .filter((b) => b.type === "income")
-        .reduce((sum, b) => sum + b.amount, 0)
-      
-      return transactionIncome + fixedIncome
-    },
-    [data.transactions, filterByMonth, getFixedBillsForMonth]
-  )
+  const getCategory = React.useCallback((id: string) => data.categories.find(c => c.id === id), [data.categories])
 
-  const getTotalExpenses = React.useCallback(
-    (month?: string) => {
-      const filteredTransactions = filterByMonth(data.transactions, month)
-      const transactionExpenses = filteredTransactions
-        .filter((t) => t.type === "expense")
-        .reduce((sum, t) => sum + t.amount, 0)
-      
-      const fixedExpenses = getFixedBillsForMonth(month)
-        .filter((b) => b.type === "expense")
-        .reduce((sum, b) => sum + b.amount, 0)
-      
-      return transactionExpenses + fixedExpenses
-    },
-    [data.transactions, filterByMonth, getFixedBillsForMonth]
-  )
+  const getTotalIncome = React.useCallback((month?: string) =>
+    data.transactions.filter(t => t.type === "income" && (!month || t.date.startsWith(month))).reduce((s, t) => s + t.amount, 0)
+  , [data.transactions])
 
-  const getBalance = React.useCallback(
-    (month?: string) => getTotalIncome(month) - getTotalExpenses(month),
-    [getTotalIncome, getTotalExpenses]
-  )
+  const getTotalExpenses = React.useCallback((month?: string) =>
+    data.transactions.filter(t => t.type === "expense" && (!month || t.date.startsWith(month))).reduce((s, t) => s + t.amount, 0)
+  , [data.transactions])
+
+  const getBalance = React.useCallback((month?: string) => getTotalIncome(month) - getTotalExpenses(month), [getTotalIncome, getTotalExpenses])
 
   const getUpcomingBills = React.useCallback(() => {
     const today = new Date()
-    const currentDay = today.getDate()
-    return data.fixedBills
-      .filter((b) => b.isActive)
-      .sort((a, b) => {
-        const aDays = a.dueDay >= currentDay ? a.dueDay - currentDay : 30 - currentDay + a.dueDay
-        const bDays = b.dueDay >= currentDay ? b.dueDay - currentDay : 30 - currentDay + b.dueDay
-        return aDays - bDays
-      })
+    return data.fixedBills.filter(b => {
+      if (!b.isActive) return false
+      const dueDate = new Date(today.getFullYear(), today.getMonth(), b.dueDay)
+      if (dueDate < today) dueDate.setMonth(dueDate.getMonth() + 1)
+      return (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= 7
+    })
   }, [data.fixedBills])
 
   const getUpcomingScheduled = React.useCallback(() => {
     const today = new Date().toISOString().split("T")[0]
-    return data.scheduledTransactions
-      .filter((t) => !t.isCompleted && t.scheduledDate >= today)
-      .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
+    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]
+    return data.scheduledTransactions.filter(t => !t.isCompleted && t.scheduledDate >= today && t.scheduledDate <= nextWeek)
   }, [data.scheduledTransactions])
 
+  const signOut = React.useCallback(async () => { await supabase.auth.signOut() }, [supabase])
+
   return (
-    <FinanceContext.Provider
-      value={{
-        data,
-        isLoaded,
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        addCategory,
-        deleteCategory,
-        addGoal,
-        updateGoal,
-        deleteGoal,
-        addFixedBill,
-        updateFixedBill,
-        deleteFixedBill,
-        addScheduledTransaction,
-        updateScheduledTransaction,
-        deleteScheduledTransaction,
-        getCategory,
-        getTotalIncome,
-        getTotalExpenses,
-        getBalance,
-        getUpcomingBills,
-        getUpcomingScheduled,
-      }}
-    >
+    <FinanceContext.Provider value={{
+      data, isLoaded, user,
+      addTransaction, updateTransaction, deleteTransaction,
+      addCategory, deleteCategory,
+      addGoal, updateGoal, deleteGoal,
+      addFixedBill, updateFixedBill, deleteFixedBill,
+      addScheduledTransaction, updateScheduledTransaction, deleteScheduledTransaction,
+      getCategory, getTotalIncome, getTotalExpenses, getBalance,
+      getUpcomingBills, getUpcomingScheduled, signOut,
+    }}>
       {children}
     </FinanceContext.Provider>
   )
@@ -244,8 +302,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
 export function useFinance() {
   const context = React.useContext(FinanceContext)
-  if (!context) {
-    throw new Error("useFinance must be used within a FinanceProvider")
-  }
+  if (!context) throw new Error("useFinance must be used within FinanceProvider")
   return context
 }
