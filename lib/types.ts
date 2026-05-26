@@ -53,6 +53,7 @@ export interface ScheduledTransaction {
 }
 
 export interface FinancialData {
+  investments: Investment[]
   transactions: Transaction[]
   categories: Category[]
   goals: Goal[]
@@ -74,3 +75,15 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "11", name: "Compras", icon: "ShoppingBag", color: "#f59e0b", type: "expense" },
   { id: "12", name: "Contas", icon: "FileText", color: "#64748b", type: "expense" },
 ]
+
+export type AssetType = "crypto" | "stock" | "fund"
+
+export interface Investment {
+  id: string
+  name: string
+  ticker: string
+  assetType: AssetType
+  quantity: number
+  avgPrice: number
+  notes?: string
+}

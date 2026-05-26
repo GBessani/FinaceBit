@@ -9,6 +9,7 @@ import {
   Goal,
   FixedBill,
   ScheduledTransaction,
+  Investment,
 } from "@/lib/types"
 import { User } from "@supabase/supabase-js"
 
@@ -72,6 +73,18 @@ function mapScheduledTransaction(row: Record<string, unknown>): ScheduledTransac
   }
 }
 
+function mapInvestment(row: Record<string, unknown>): Investment {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    ticker: row.ticker as string,
+    assetType: row.asset_type as Investment["assetType"],
+    quantity: Number(row.quantity),
+    avgPrice: Number(row.avg_price),
+    notes: row.notes as string | undefined,
+  }
+}
+
 interface FinanceContextType {
   data: FinancialData
   isLoaded: boolean
@@ -96,6 +109,9 @@ interface FinanceContextType {
   getBalance: (month?: string) => number
   getUpcomingBills: () => FixedBill[]
   getUpcomingScheduled: () => ScheduledTransaction[]
+  addInvestment: (investment: Investment) => Promise<void>
+  updateInvestment: (investment: Investment) => Promise<void>
+  deleteInvestment: (id: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -111,16 +127,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     goals: [],
     fixedBills: [],
     scheduledTransactions: [],
+    investments: [],
   })
   const [isLoaded, setIsLoaded] = React.useState(false)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, scheduled] = await Promise.all([
+    const [cats, txs, goals, bills, scheduled, invs] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("fixed_bills").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("scheduled_transactions").select("*").eq("user_id", userId).order("scheduled_date"),
+      supabase.from("investments").select("*").eq("user_id", userId).order("created_at"),
     ])
 
     setData({
@@ -129,6 +147,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       goals: (goals.data ?? []).map(mapGoal),
       fixedBills: (bills.data ?? []).map(mapFixedBill),
       scheduledTransactions: (scheduled.data ?? []).map(mapScheduledTransaction),
+      investments: (invs.data ?? []).map(mapInvestment),
     })
     setIsLoaded(true)
   }, [supabase])
@@ -312,6 +331,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return data.scheduledTransactions.filter(t => !t.isCompleted && t.scheduledDate >= today && t.scheduledDate <= nextWeek)
   }, [data.scheduledTransactions])
 
+
+  const addInvestment = React.useCallback(async (inv: Investment) => {
+    if (!user) return
+    const { data: row } = await supabase.from("investments").insert({
+      user_id: user.id, name: inv.name, ticker: inv.ticker,
+      asset_type: inv.assetType, quantity: inv.quantity,
+      avg_price: inv.avgPrice, notes: inv.notes ?? null,
+    }).select().single()
+    if (row) setData(prev => ({ ...prev, investments: [...prev.investments, mapInvestment(row)] }))
+  }, [user, supabase])
+
+  const updateInvestment = React.useCallback(async (inv: Investment) => {
+    const { data: row } = await supabase.from("investments").update({
+      name: inv.name, ticker: inv.ticker, asset_type: inv.assetType,
+      quantity: inv.quantity, avg_price: inv.avgPrice, notes: inv.notes ?? null,
+    }).eq("id", inv.id).select().single()
+    if (row) setData(prev => ({ ...prev, investments: prev.investments.map(x => x.id === inv.id ? mapInvestment(row) : x) }))
+  }, [supabase])
+
+  const deleteInvestment = React.useCallback(async (id: string) => {
+    await supabase.from("investments").delete().eq("id", id)
+    setData(prev => ({ ...prev, investments: prev.investments.filter(i => i.id !== id) }))
+  }, [supabase])
+
   const signOut = React.useCallback(async () => { await supabase.auth.signOut() }, [supabase])
 
   return (
@@ -324,6 +367,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       addScheduledTransaction, updateScheduledTransaction, deleteScheduledTransaction,
       getCategory, getTotalIncome, getTotalExpenses, getBalance,
       getUpcomingBills, getUpcomingScheduled, signOut,
+      addInvestment, updateInvestment, deleteInvestment,
     }}>
       {children}
     </FinanceContext.Provider>

@@ -14,6 +14,7 @@ import {
   RefreshCw,
   CalendarClock,
   LogOut,
+  TrendingUp,
 } from "lucide-react"
 import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/contas-fixas", label: "Contas Fixas", icon: RefreshCw },
   { href: "/metas", label: "Metas", icon: Target },
   { href: "/categorias", label: "Categorias", icon: Tags },
+  { href: "/investimentos", label: "Investimentos", icon: TrendingUp },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ]
 
