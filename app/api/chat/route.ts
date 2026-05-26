@@ -1,4 +1,9 @@
 import { streamText } from "ai"
+import { createGroq } from "@ai-sdk/groq"
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
 export async function POST(req: Request) {
   const { messages, financialContext } = await req.json()
@@ -22,7 +27,7 @@ Regras:
 - Se não tiver informação suficiente, peça mais detalhes ao usuário`
 
   const result = streamText({
-    model: "anthropic/claude-sonnet-4-20250514",
+    model: groq("llama-3.3-70b-versatile"),
     system: systemPrompt,
     messages,
   })
