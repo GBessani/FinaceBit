@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { CategoryIcon } from "@/components/category-icon"
 import { formatCurrency } from "@/lib/utils"
@@ -45,10 +44,6 @@ export function FixedBillsList() {
   const [dueDay, setDueDay] = React.useState("1")
   const [recurrence, setRecurrence] = React.useState<RecurrenceType>("monthly")
   const [notes, setNotes] = React.useState("")
-  const [isInstallment, setIsInstallment] = React.useState(false)
-  const [totalInstallments, setTotalInstallments] = React.useState("12")
-  const [totalAmount, setTotalAmount] = React.useState("")
-  const [startDate, setStartDate] = React.useState("")
 
   const filteredCategories = data.categories.filter((c) => c.type === type)
 
@@ -60,10 +55,6 @@ export function FixedBillsList() {
     setDueDay("1")
     setRecurrence("monthly")
     setNotes("")
-    setIsInstallment(false)
-    setTotalInstallments("12")
-    setTotalAmount("")
-    setStartDate("")
     setEditingBill(null)
   }
 
@@ -77,10 +68,6 @@ export function FixedBillsList() {
       setDueDay(bill.dueDay.toString())
       setRecurrence(bill.recurrence)
       setNotes(bill.notes || "")
-      setIsInstallment(!!bill.totalInstallments)
-      setTotalInstallments(bill.totalInstallments?.toString() || "12")
-      setTotalAmount(bill.totalInstallments ? (bill.amount * bill.totalInstallments).toFixed(2) : "")
-      setStartDate(bill.startDate || "")
     } else {
       resetForm()
     }
@@ -89,23 +76,18 @@ export function FixedBillsList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const finalAmount = isInstallment && totalAmount && totalInstallments
-      ? (parseFloat(totalAmount) / parseInt(totalInstallments))
-      : parseFloat(amount)
-    if (!description || !finalAmount || !categoryId) return
+    if (!description || !amount || !categoryId) return
 
     const billData: FixedBill = {
       id: editingBill?.id || "",
       description,
-      amount: finalAmount,
+      amount: parseFloat(amount),
       type,
       categoryId,
       dueDay: parseInt(dueDay),
       recurrence,
       isActive: editingBill?.isActive ?? true,
       notes: notes || undefined,
-      totalInstallments: isInstallment ? parseInt(totalInstallments) : undefined,
-      startDate: isInstallment ? startDate : undefined,
     }
 
     if (editingBill) {
@@ -200,19 +182,14 @@ export function FixedBillsList() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{isInstallment ? "Valor Total" : "Valor"}</Label>
+                  <Label>Valor</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={isInstallment ? totalAmount : amount}
-                    onChange={(e) => isInstallment ? setTotalAmount(e.target.value) : setAmount(e.target.value)}
-                    placeholder={isInstallment ? "Ex: 1200,00" : "0,00"}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0,00"
                   />
-                  {isInstallment && totalAmount && totalInstallments && (
-                    <p className="text-xs text-muted-foreground">
-                      {parseInt(totalInstallments)}x de {formatCurrency(parseFloat(totalAmount) / parseInt(totalInstallments))}
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Dia do Vencimento</Label>
@@ -252,42 +229,8 @@ export function FixedBillsList() {
                 />
               </div>
 
-              {!editingBill && (
-                <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <Label className="cursor-pointer">É parcelado?</Label>
-                    <Switch
-                      checked={isInstallment}
-                      onCheckedChange={setIsInstallment}
-                    />
-                  </div>
-                  {isInstallment && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Número de parcelas</Label>
-                        <Input
-                          type="number"
-                          min="2"
-                          max="360"
-                          value={totalInstallments}
-                          onChange={(e) => setTotalInstallments(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Data da 1ª parcela</Label>
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <Button type="submit" className="w-full">
-                {editingBill ? "Salvar Alterações" : isInstallment ? `Parcelar em ${totalInstallments}x` : "Adicionar Conta Fixa"}
+                {editingBill ? "Salvar Alterações" : "Adicionar Conta Fixa"}
               </Button>
             </form>
           </DialogContent>
@@ -358,16 +301,6 @@ export function FixedBillsList() {
                               <Badge variant="outline" className="text-xs">
                                 {recurrenceLabels[bill.recurrence]}
                               </Badge>
-                              {bill.totalInstallments && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {(() => {
-                                    const paid = data.scheduledTransactions.filter(
-                                      t => t.fixedBillId === bill.id && t.isCompleted
-                                    ).length
-                                    return `${paid}/${bill.totalInstallments}x`
-                                  })()}
-                                </Badge>
-                              )}
                               {bill.isActive && daysUntil <= 5 && (
                                 <Badge variant="destructive" className="text-xs">
                                   {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}
@@ -439,16 +372,6 @@ export function FixedBillsList() {
                               <Badge variant="outline" className="text-xs">
                                 {recurrenceLabels[bill.recurrence]}
                               </Badge>
-                              {bill.totalInstallments && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {(() => {
-                                    const paid = data.scheduledTransactions.filter(
-                                      t => t.fixedBillId === bill.id && t.isCompleted
-                                    ).length
-                                    return `${paid}/${bill.totalInstallments}x`
-                                  })()}
-                                </Badge>
-                              )}
                               {bill.isActive && daysUntil <= 3 && (
                                 <Badge variant="default" className="text-xs bg-primary">
                                   {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}

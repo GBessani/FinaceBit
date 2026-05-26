@@ -27,6 +27,7 @@ import { formatCurrency } from "@/lib/utils"
 import { format, differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Plus, Trash2, Edit, CalendarClock, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 
 export function ScheduledList() {
   const {
@@ -45,6 +46,9 @@ export function ScheduledList() {
   const [categoryId, setCategoryId] = React.useState("")
   const [scheduledDate, setScheduledDate] = React.useState("")
   const [notes, setNotes] = React.useState("")
+  const [isInstallment, setIsInstallment] = React.useState(false)
+  const [totalInstallments, setTotalInstallments] = React.useState("2")
+  const [totalAmount, setTotalAmount] = React.useState("")
 
   const filteredCategories = data.categories.filter((c) => c.type === type)
 
@@ -55,6 +59,9 @@ export function ScheduledList() {
     setCategoryId("")
     setScheduledDate("")
     setNotes("")
+    setIsInstallment(false)
+    setTotalInstallments("2")
+    setTotalAmount("")
     setEditingTransaction(null)
   }
 
@@ -74,25 +81,50 @@ export function ScheduledList() {
     setIsDialogOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !categoryId || !scheduledDate) return
-
-    const transactionData: ScheduledTransaction = {
-      id: editingTransaction?.id || crypto.randomUUID(),
-      description,
-      amount: parseFloat(amount),
-      type,
-      categoryId,
-      scheduledDate,
-      isCompleted: editingTransaction?.isCompleted ?? false,
-      notes: notes || undefined,
-    }
+    const finalAmount = isInstallment && totalAmount && totalInstallments
+      ? parseFloat(totalAmount) / parseInt(totalInstallments)
+      : parseFloat(amount)
+    if (!description || !finalAmount || !categoryId || !scheduledDate) return
 
     if (editingTransaction) {
-      updateScheduledTransaction(transactionData)
+      updateScheduledTransaction({
+        ...editingTransaction,
+        description,
+        amount: finalAmount,
+        type,
+        categoryId,
+        scheduledDate,
+        notes: notes || undefined,
+      })
+    } else if (isInstallment && totalInstallments) {
+      const total = parseInt(totalInstallments)
+      for (let i = 0; i < total; i++) {
+        const date = new Date(scheduledDate)
+        date.setMonth(date.getMonth() + i)
+        await addScheduledTransaction({
+          id: "",
+          description: `${description} (${i + 1}/${total})`,
+          amount: finalAmount,
+          type,
+          categoryId,
+          scheduledDate: date.toISOString().split("T")[0],
+          isCompleted: false,
+          notes: notes || undefined,
+        })
+      }
     } else {
-      addScheduledTransaction(transactionData)
+      addScheduledTransaction({
+        id: "",
+        description,
+        amount: finalAmount,
+        type,
+        categoryId,
+        scheduledDate,
+        isCompleted: false,
+        notes: notes || undefined,
+      })
     }
 
     setIsDialogOpen(false)
@@ -264,17 +296,22 @@ export function ScheduledList() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Valor</Label>
+                  <Label>{isInstallment ? "Valor Total" : "Valor"}</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    value={isInstallment ? totalAmount : amount}
+                    onChange={(e) => isInstallment ? setTotalAmount(e.target.value) : setAmount(e.target.value)}
                     placeholder="0,00"
                   />
+                  {isInstallment && totalAmount && totalInstallments && (
+                    <p className="text-xs text-muted-foreground">
+                      {parseInt(totalInstallments)}x de {(parseFloat(totalAmount) / parseInt(totalInstallments)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Data</Label>
+                  <Label>Data da 1ª parcela</Label>
                   <Input
                     type="date"
                     value={scheduledDate}
@@ -292,7 +329,7 @@ export function ScheduledList() {
                     {filteredCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <div className="flex items-center gap-2">
-                          <CategoryIcon icon={cat.icon} color={cat.color} size="sm" />
+                          <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
                           {cat.name}
                         </div>
                       </SelectItem>
@@ -308,8 +345,37 @@ export function ScheduledList() {
                   placeholder="Adicione notas..."
                 />
               </div>
+
+              {!editingTransaction && (
+                <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <Label className="cursor-pointer">Parcelar?</Label>
+                    <Switch
+                      checked={isInstallment}
+                      onCheckedChange={(checked) => {
+                        setIsInstallment(checked)
+                        if (checked && amount) setTotalAmount(amount)
+                        if (!checked && totalAmount) setAmount(totalAmount)
+                      }}
+                    />
+                  </div>
+                  {isInstallment && (
+                    <div className="space-y-2">
+                      <Label>Número de parcelas</Label>
+                      <Input
+                        type="number"
+                        min="2"
+                        max="360"
+                        value={totalInstallments}
+                        onChange={(e) => setTotalInstallments(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Button type="submit" className="w-full">
-                {editingTransaction ? "Salvar Alterações" : "Agendar Lançamento"}
+                {editingTransaction ? "Salvar Alterações" : isInstallment ? `Parcelar em ${totalInstallments}x` : "Agendar Lançamento"}
               </Button>
             </form>
           </DialogContent>

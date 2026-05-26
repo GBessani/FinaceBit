@@ -242,7 +242,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }).select().single()
     if (row) {
       const newBill = mapFixedBill(row)
-      setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
 
       // Se for parcelado, cria os lançamentos futuros automaticamente
       if (b.totalInstallments && b.startDate) {
@@ -265,13 +264,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           })
         }
         const { data: scheduled } = await supabase.from("scheduled_transactions").insert(installments).select()
-        if (scheduled) {
-          setData(prev => ({
-            ...prev,
-            fixedBills: [...prev.fixedBills.filter(x => x.id !== newBill.id), newBill],
-            scheduledTransactions: [...prev.scheduledTransactions, ...scheduled.map(mapScheduledTransaction)],
-          }))
-        }
+        setData(prev => ({
+          ...prev,
+          fixedBills: [...prev.fixedBills, newBill],
+          scheduledTransactions: [...prev.scheduledTransactions, ...(scheduled ?? []).map(mapScheduledTransaction)],
+        }))
+      } else {
+        setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
       }
     }
   }, [user, supabase])
