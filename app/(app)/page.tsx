@@ -3,6 +3,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions"
 import { ExpenseChart, MonthlyChart } from "@/components/dashboard/charts"
 import { UpcomingOverview } from "@/components/dashboard/upcoming-overview"
 import { AlertBanner } from "@/components/dashboard/alert-banner"
+import { OnboardingTour } from "@/components/onboarding/onboarding-tour"
 
 export default function DashboardPage() {
   return (
@@ -12,18 +13,19 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Visão geral das suas finanças</p>
       </div>
 
+      <OnboardingTour />
       <AlertBanner />
 
-      <DashboardSummary />
+      <div data-tour="summary"><DashboardSummary /></div>
 
-      <UpcomingOverview />
+      <div data-tour="upcoming"><UpcomingOverview /></div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-tour="charts" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ExpenseChart />
         <MonthlyChart />
       </div>
 
-      <RecentTransactions />
+      <div data-tour="recent"><RecentTransactions /></div>
     </div>
   )
 }
