@@ -1,5 +1,5 @@
-import { streamText } from "ai"
 import { createGroq } from "@ai-sdk/groq"
+import { streamText } from "ai"
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
@@ -23,8 +23,7 @@ Regras:
 - Use linguagem simples e acessível
 - Quando relevante, cite os dados específicos do usuário
 - Dê conselhos práticos e acionáveis
-- Não invente dados que não foram fornecidos
-- Se não tiver informação suficiente, peça mais detalhes ao usuário`
+- Não invente dados que não foram fornecidos`
 
   const result = streamText({
     model: groq("llama-3.3-70b-versatile"),

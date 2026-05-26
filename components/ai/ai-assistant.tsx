@@ -2,13 +2,27 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
-import { useChat } from "@ai-sdk/react"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth } from "@/lib/utils"
 import { Sparkles, Send, X, Loader2, Bot, User } from "lucide-react"
+
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+}
 
 export function AIAssistant() {
   const { data, getTotalIncome, getTotalExpenses, getBalance, getCategory, isLoaded } = useFinance()
   const [isOpen, setIsOpen] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content: "Olá! Sou seu assistente financeiro com IA. Posso analisar seus gastos, dar dicas de economia, ajudar a planejar metas e responder perguntas sobre suas finanças. Como posso ajudar?",
+    },
+  ])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const currentMonth = getCurrentMonth()
@@ -60,24 +74,78 @@ ${
 `
     : ""
 
-  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
-    api: "/api/chat",
-    body: {
-      financialContext,
-    },
-    initialMessages: [
-      {
-        id: "welcome",
-        role: "assistant",
-        content:
-          "Olá! Sou seu assistente financeiro com IA. Posso analisar seus gastos, dar dicas de economia, ajudar a planejar metas e responder perguntas sobre suas finanças. Como posso ajudar?",
-      },
-    ],
-  })
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input.trim(),
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput("")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          financialContext,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Erro na resposta da API")
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "",
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          if (chunk) {
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === assistantMessage.id
+                  ? { ...m, content: m.content + chunk }
+                  : m
+              )
+            )
+          }
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: "Desculpe, ocorreu um erro. Tente novamente.",
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (!isLoaded) return null
 
@@ -100,7 +168,7 @@ ${
                 </div>
                 <div>
                   <h3 className="font-semibold">Assistente Financeiro</h3>
-                  <p className="text-xs text-muted-foreground">Powered by AI</p>
+                  <p className="text-xs text-muted-foreground">Powered by Groq AI</p>
                 </div>
               </div>
               <button
@@ -140,7 +208,7 @@ ${
                 </div>
               ))}
 
-              {status === "streaming" && (
+              {isLoading && (
                 <div className="flex gap-3">
                   <div className="p-2 bg-secondary rounded-lg h-fit">
                     <Bot className="h-4 w-4" />
@@ -159,14 +227,14 @@ ${
                 <input
                   type="text"
                   value={input}
-                  onChange={handleInputChange}
+                  onChange={e => setInput(e.target.value)}
                   placeholder="Pergunte sobre suas finanças..."
                   className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={status === "streaming"}
+                  disabled={isLoading}
                 />
                 <button
                   type="submit"
-                  disabled={!input.trim() || status === "streaming"}
+                  disabled={!input.trim() || isLoading}
                   className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="h-5 w-5" />
