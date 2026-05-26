@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -120,13 +121,16 @@ export function Sidebar() {
                 </span>
               </div>
             )}
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSignOut}
+                className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </button>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </aside>

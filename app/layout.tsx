@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -13,9 +14,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Finança - Gestão Financeira Pessoal",
-  description:
-    "Aplicativo completo de gestão financeira pessoal com controle de receitas, despesas, metas e relatórios.",
+  title: "FinaceBit - Gestão Financeira Pessoal",
+  description: "Aplicativo completo de gestão financeira pessoal com controle de receitas, despesas, metas e relatórios.",
 }
 
 export default function RootLayout({
@@ -24,8 +24,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} ${geistMono.variable} bg-background`}>
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="pt-BR" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased bg-background">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

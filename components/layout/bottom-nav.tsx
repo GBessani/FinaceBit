@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 const mainNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -108,9 +109,12 @@ export function BottomNav() {
                   {user?.user_metadata?.full_name ?? user?.email}
                 </span>
               </div>
-              <button onClick={() => setShowMore(false)} className="p-2 hover:bg-secondary rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <button onClick={() => setShowMore(false)} className="p-2 hover:bg-secondary rounded-lg">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {moreNav.map((item) => {
