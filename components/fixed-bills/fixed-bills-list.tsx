@@ -47,6 +47,7 @@ export function FixedBillsList() {
   const [notes, setNotes] = React.useState("")
   const [isInstallment, setIsInstallment] = React.useState(false)
   const [totalInstallments, setTotalInstallments] = React.useState("12")
+  const [totalAmount, setTotalAmount] = React.useState("")
   const [startDate, setStartDate] = React.useState("")
 
   const filteredCategories = data.categories.filter((c) => c.type === type)
@@ -61,6 +62,7 @@ export function FixedBillsList() {
     setNotes("")
     setIsInstallment(false)
     setTotalInstallments("12")
+    setTotalAmount("")
     setStartDate("")
     setEditingBill(null)
   }
@@ -77,6 +79,7 @@ export function FixedBillsList() {
       setNotes(bill.notes || "")
       setIsInstallment(!!bill.totalInstallments)
       setTotalInstallments(bill.totalInstallments?.toString() || "12")
+      setTotalAmount(bill.totalInstallments ? (bill.amount * bill.totalInstallments).toFixed(2) : "")
       setStartDate(bill.startDate || "")
     } else {
       resetForm()
@@ -86,12 +89,15 @@ export function FixedBillsList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !categoryId) return
+    const finalAmount = isInstallment && totalAmount && totalInstallments
+      ? (parseFloat(totalAmount) / parseInt(totalInstallments))
+      : parseFloat(amount)
+    if (!description || !finalAmount || !categoryId) return
 
     const billData: FixedBill = {
       id: editingBill?.id || "",
       description,
-      amount: parseFloat(amount),
+      amount: finalAmount,
       type,
       categoryId,
       dueDay: parseInt(dueDay),
@@ -194,14 +200,19 @@ export function FixedBillsList() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Valor</Label>
+                  <Label>{isInstallment ? "Valor Total" : "Valor"}</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0,00"
+                    value={isInstallment ? totalAmount : amount}
+                    onChange={(e) => isInstallment ? setTotalAmount(e.target.value) : setAmount(e.target.value)}
+                    placeholder={isInstallment ? "Ex: 1200,00" : "0,00"}
                   />
+                  {isInstallment && totalAmount && totalInstallments && (
+                    <p className="text-xs text-muted-foreground">
+                      {parseInt(totalInstallments)}x de {formatCurrency(parseFloat(totalAmount) / parseInt(totalInstallments))}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Dia do Vencimento</Label>
