@@ -57,6 +57,9 @@ function mapFixedBill(row: Record<string, unknown>): FixedBill {
     recurrence: row.recurrence as FixedBill["recurrence"],
     isActive: row.is_active as boolean,
     notes: row.notes as string | undefined,
+    totalInstallments: row.total_installments as number | undefined,
+    currentInstallment: row.current_installment as number | undefined,
+    startDate: row.start_date as string | undefined,
   }
 }
 
@@ -70,6 +73,8 @@ function mapScheduledTransaction(row: Record<string, unknown>): ScheduledTransac
     scheduledDate: (row.scheduled_date as string).substring(0, 10),
     isCompleted: row.is_completed as boolean,
     notes: row.notes as string | undefined,
+    fixedBillId: row.fixed_bill_id as string | undefined,
+    installmentNumber: row.installment_number as number | undefined,
   }
 }
 
@@ -231,8 +236,44 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       user_id: user.id, description: b.description, amount: b.amount, type: b.type,
       category_id: b.categoryId || null, due_day: b.dueDay, recurrence: b.recurrence,
       is_active: b.isActive, notes: b.notes ?? null,
+      total_installments: b.totalInstallments ?? null,
+      current_installment: b.totalInstallments ? 1 : null,
+      start_date: b.startDate ?? null,
     }).select().single()
-    if (row) setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, mapFixedBill(row)] }))
+    if (row) {
+      const newBill = mapFixedBill(row)
+      setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
+
+      // Se for parcelado, cria os lançamentos futuros automaticamente
+      if (b.totalInstallments && b.startDate) {
+        const installments = []
+        for (let i = 0; i < b.totalInstallments; i++) {
+          const date = new Date(b.startDate)
+          date.setMonth(date.getMonth() + i)
+          const dateStr = date.toISOString().split("T")[0]
+          installments.push({
+            user_id: user.id,
+            description: `${b.description} (${i + 1}/${b.totalInstallments})`,
+            amount: b.amount,
+            type: b.type,
+            category_id: b.categoryId || null,
+            scheduled_date: dateStr,
+            is_completed: false,
+            notes: b.notes ?? null,
+            fixed_bill_id: row.id,
+            installment_number: i + 1,
+          })
+        }
+        const { data: scheduled } = await supabase.from("scheduled_transactions").insert(installments).select()
+        if (scheduled) {
+          setData(prev => ({
+            ...prev,
+            fixedBills: [...prev.fixedBills.filter(x => x.id !== newBill.id), newBill],
+            scheduledTransactions: [...prev.scheduledTransactions, ...scheduled.map(mapScheduledTransaction)],
+          }))
+        }
+      }
+    }
   }, [user, supabase])
 
   const updateFixedBill = React.useCallback(async (b: FixedBill) => {

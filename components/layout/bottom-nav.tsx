@@ -15,7 +15,7 @@ import {
   LogOut,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
 
 const mainNav = [
@@ -37,6 +37,16 @@ export function BottomNav() {
   const router = useRouter()
   const { user, signOut } = useFinance()
   const [showMore, setShowMore] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
+
+  if (!isMobile) return null
 
   async function handleSignOut() {
     await signOut()
@@ -46,7 +56,7 @@ export function BottomNav() {
   return (
     <>
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border safe-area-pb block lg:!hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border safe-area-pb ">
         <div className="flex items-center justify-around px-2 py-2">
           {mainNav.map((item) => {
             const isActive = pathname === item.href

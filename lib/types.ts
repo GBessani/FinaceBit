@@ -39,6 +39,10 @@ export interface FixedBill {
   recurrence: RecurrenceType
   isActive: boolean
   notes?: string
+  // Parcelamento (opcional)
+  totalInstallments?: number  // total de parcelas (null = sem fim)
+  currentInstallment?: number // parcela atual
+  startDate?: string          // data da primeira parcela (YYYY-MM-DD)
 }
 
 export interface ScheduledTransaction {
@@ -50,6 +54,8 @@ export interface ScheduledTransaction {
   scheduledDate: string
   isCompleted: boolean
   notes?: string
+  fixedBillId?: string
+  installmentNumber?: number
 }
 
 export interface FinancialData {

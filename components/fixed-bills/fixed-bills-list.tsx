@@ -45,6 +45,9 @@ export function FixedBillsList() {
   const [dueDay, setDueDay] = React.useState("1")
   const [recurrence, setRecurrence] = React.useState<RecurrenceType>("monthly")
   const [notes, setNotes] = React.useState("")
+  const [isInstallment, setIsInstallment] = React.useState(false)
+  const [totalInstallments, setTotalInstallments] = React.useState("12")
+  const [startDate, setStartDate] = React.useState("")
 
   const filteredCategories = data.categories.filter((c) => c.type === type)
 
@@ -56,6 +59,9 @@ export function FixedBillsList() {
     setDueDay("1")
     setRecurrence("monthly")
     setNotes("")
+    setIsInstallment(false)
+    setTotalInstallments("12")
+    setStartDate("")
     setEditingBill(null)
   }
 
@@ -69,6 +75,9 @@ export function FixedBillsList() {
       setDueDay(bill.dueDay.toString())
       setRecurrence(bill.recurrence)
       setNotes(bill.notes || "")
+      setIsInstallment(!!bill.totalInstallments)
+      setTotalInstallments(bill.totalInstallments?.toString() || "12")
+      setStartDate(bill.startDate || "")
     } else {
       resetForm()
     }
@@ -80,7 +89,7 @@ export function FixedBillsList() {
     if (!description || !amount || !categoryId) return
 
     const billData: FixedBill = {
-      id: editingBill?.id || crypto.randomUUID(),
+      id: editingBill?.id || "",
       description,
       amount: parseFloat(amount),
       type,
@@ -89,6 +98,8 @@ export function FixedBillsList() {
       recurrence,
       isActive: editingBill?.isActive ?? true,
       notes: notes || undefined,
+      totalInstallments: isInstallment ? parseInt(totalInstallments) : undefined,
+      startDate: isInstallment ? startDate : undefined,
     }
 
     if (editingBill) {
@@ -213,7 +224,7 @@ export function FixedBillsList() {
                     {filteredCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <div className="flex items-center gap-2">
-                          <CategoryIcon icon={cat.icon} color={cat.color} size="sm" />
+                          <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
                           {cat.name}
                         </div>
                       </SelectItem>
@@ -229,8 +240,43 @@ export function FixedBillsList() {
                   placeholder="Adicione notas..."
                 />
               </div>
+
+              {!editingBill && (
+                <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <Label className="cursor-pointer">É parcelado?</Label>
+                    <Switch
+                      checked={isInstallment}
+                      onCheckedChange={setIsInstallment}
+                    />
+                  </div>
+                  {isInstallment && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Número de parcelas</Label>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="360"
+                          value={totalInstallments}
+                          onChange={(e) => setTotalInstallments(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data da 1ª parcela</Label>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Button type="submit" className="w-full">
-                {editingBill ? "Salvar Alterações" : "Adicionar Conta Fixa"}
+                {editingBill ? "Salvar Alterações" : isInstallment ? `Parcelar em ${totalInstallments}x` : "Adicionar Conta Fixa"}
               </Button>
             </form>
           </DialogContent>
@@ -301,6 +347,16 @@ export function FixedBillsList() {
                               <Badge variant="outline" className="text-xs">
                                 {recurrenceLabels[bill.recurrence]}
                               </Badge>
+                              {bill.totalInstallments && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {(() => {
+                                    const paid = data.scheduledTransactions.filter(
+                                      t => t.fixedBillId === bill.id && t.isCompleted
+                                    ).length
+                                    return `${paid}/${bill.totalInstallments}x`
+                                  })()}
+                                </Badge>
+                              )}
                               {bill.isActive && daysUntil <= 5 && (
                                 <Badge variant="destructive" className="text-xs">
                                   {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}
@@ -372,6 +428,16 @@ export function FixedBillsList() {
                               <Badge variant="outline" className="text-xs">
                                 {recurrenceLabels[bill.recurrence]}
                               </Badge>
+                              {bill.totalInstallments && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {(() => {
+                                    const paid = data.scheduledTransactions.filter(
+                                      t => t.fixedBillId === bill.id && t.isCompleted
+                                    ).length
+                                    return `${paid}/${bill.totalInstallments}x`
+                                  })()}
+                                </Badge>
+                              )}
                               {bill.isActive && daysUntil <= 3 && (
                                 <Badge variant="default" className="text-xs bg-primary">
                                   {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}
