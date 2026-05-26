@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server"
+import { rateLimit, getIP } from "@/lib/rate-limit"
 
 const BRAPI_TOKEN = process.env.BRAPI_TOKEN
 
 export async function GET(request: Request) {
+  // Rate limit: 60 consultas por hora por IP
+  const ip = getIP(request)
+  const limit = rateLimit(`investments:${ip}`, { limit: 60, windowMs: 60 * 60 * 1000 })
+
+  if (!limit.success) {
+    return NextResponse.json(
+      { error: `Limite de consultas atingido. Tente novamente em ${limit.resetIn} segundos.` },
+      { status: 429 }
+    )
+  }
+
   const { searchParams } = new URL(request.url)
-  const tickers = searchParams.get("tickers") // ex: "PETR4,ITUB4"
-  const cryptos = searchParams.get("cryptos")  // ex: "bitcoin,ethereum"
+  const tickers = searchParams.get("tickers")
+  const cryptos = searchParams.get("cryptos")
 
   const results: Record<string, { price: number; change24h: number; name: string }> = {}
 
-  // ─── Criptomoedas via CoinGecko (gratuito, sem key) ──────
+  // ─── Criptomoedas via CoinGecko ────────────────────────
   if (cryptos) {
     try {
       const res = await fetch(
@@ -29,7 +41,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // ─── Ações/Fundos B3 via brapi ────────────────────────────
+  // ─── Ações/Fundos B3 via brapi ─────────────────────────
   if (tickers && BRAPI_TOKEN) {
     try {
       const res = await fetch(

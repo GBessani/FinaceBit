@@ -1,11 +1,24 @@
 import { createGroq } from "@ai-sdk/groq"
 import { streamText } from "ai"
+import { rateLimit, getIP } from "@/lib/rate-limit"
+import { NextResponse } from "next/server"
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
 export async function POST(req: Request) {
+  // Rate limit: 20 mensagens por hora por IP
+  const ip = getIP(req)
+  const limit = rateLimit(`chat:${ip}`, { limit: 20, windowMs: 60 * 60 * 1000 })
+
+  if (!limit.success) {
+    return NextResponse.json(
+      { error: `Limite de mensagens atingido. Tente novamente em ${limit.resetIn} segundos.` },
+      { status: 429 }
+    )
+  }
+
   const { messages, financialContext } = await req.json()
 
   const systemPrompt = `Você é um assistente financeiro pessoal inteligente e amigável. Seu objetivo é ajudar o usuário a:

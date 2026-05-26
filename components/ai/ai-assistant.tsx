@@ -102,6 +102,16 @@ ${
         }),
       })
 
+      if (response.status === 429) {
+        const data = await response.json()
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: `⚠️ ${data.error || "Limite de mensagens atingido. Tente novamente mais tarde."}`,
+        }])
+        setIsLoading(false)
+        return
+      }
       if (!response.ok) throw new Error("Erro na resposta da API")
 
       const assistantMessage: Message = {
