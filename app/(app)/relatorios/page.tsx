@@ -34,57 +34,103 @@ export default function RelatoriosPage() {
       }
     }
 
+    // Transações manuais
     data.transactions.forEach((t) => {
       const key = t.date.substring(0, 7)
       if (months[key]) {
-        if (t.type === "income") {
-          months[key].income += t.amount
-        } else {
-          months[key].expense += t.amount
-        }
+        if (t.type === "income") months[key].income += t.amount
+        else months[key].expense += t.amount
       }
     })
+
+    // Lançamentos futuros concluídos
+    data.scheduledTransactions
+      .filter((t) => t.isCompleted)
+      .forEach((t) => {
+        const key = t.scheduledDate.substring(0, 7)
+        if (months[key]) {
+          if (t.type === "income") months[key].income += t.amount
+          else months[key].expense += t.amount
+        }
+      })
+
+    // Contas fixas ativas — somam em todos os meses do período
+    data.fixedBills
+      .filter((b) => b.isActive)
+      .forEach((b) => {
+        Object.keys(months).forEach((key) => {
+          if (b.type === "income") months[key].income += b.amount
+          else months[key].expense += b.amount
+        })
+      })
 
     let runningBalance = 0
     return Object.values(months).map((m) => {
       runningBalance += m.income - m.expense
       return { ...m, balance: runningBalance }
     })
-  }, [data.transactions])
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
 
-  const totalIncome = useMemo(
-    () => data.transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0),
-    [data.transactions]
-  )
+  const totalIncome = useMemo(() => {
+    const txIncome = data.transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+    const fixedIncome = data.fixedBills.filter((b) => b.isActive && b.type === "income").reduce((s, b) => s + b.amount, 0)
+    const scheduledIncome = data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "income").reduce((s, t) => s + t.amount, 0)
+    return txIncome + fixedIncome + scheduledIncome
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
 
-  const totalExpenses = useMemo(
-    () => data.transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0),
-    [data.transactions]
-  )
+  const totalExpenses = useMemo(() => {
+    const txExpenses = data.transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+    const fixedExpenses = data.fixedBills.filter((b) => b.isActive && b.type === "expense").reduce((s, b) => s + b.amount, 0)
+    const scheduledExpenses = data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "expense").reduce((s, t) => s + t.amount, 0)
+    return txExpenses + fixedExpenses + scheduledExpenses
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
 
   const expensesByCategory = useMemo(() => {
-    const grouped = data.transactions
+    const grouped: Record<string, { name: string; value: number; color: string }> = {}
+
+    // Transações manuais
+    data.transactions
       .filter((t) => t.type === "expense")
-      .reduce((acc, t) => {
+      .forEach((t) => {
         const category = getCategory(t.categoryId)
         const name = category?.name || "Outros"
         const color = category?.color || "#6b7280"
-        if (!acc[name]) {
-          acc[name] = { name, value: 0, color }
-        }
-        acc[name].value += t.amount
-        return acc
-      }, {} as Record<string, { name: string; value: number; color: string }>)
+        if (!grouped[name]) grouped[name] = { name, value: 0, color }
+        grouped[name].value += t.amount
+      })
+
+    // Contas fixas ativas de despesa
+    data.fixedBills
+      .filter((b) => b.isActive && b.type === "expense")
+      .forEach((b) => {
+        const category = getCategory(b.categoryId)
+        const name = category?.name || "Outros"
+        const color = category?.color || "#6b7280"
+        if (!grouped[name]) grouped[name] = { name, value: 0, color }
+        grouped[name].value += b.amount
+      })
+
+    // Lançamentos futuros concluídos de despesa
+    data.scheduledTransactions
+      .filter((t) => t.isCompleted && t.type === "expense")
+      .forEach((t) => {
+        const category = getCategory(t.categoryId)
+        const name = category?.name || "Outros"
+        const color = category?.color || "#6b7280"
+        if (!grouped[name]) grouped[name] = { name, value: 0, color }
+        grouped[name].value += t.amount
+      })
 
     return Object.values(grouped).sort((a, b) => b.value - a.value)
-  }, [data.transactions, getCategory])
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions, getCategory])
 
   const averageMonthlyExpense = useMemo(() => {
-    const monthsWithData = new Set(
-      data.transactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7))
-    ).size
+    const monthsWithData = new Set([
+      ...data.transactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7)),
+      ...data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "expense").map((t) => t.scheduledDate.substring(0, 7)),
+    ]).size
     return monthsWithData > 0 ? totalExpenses / monthsWithData : 0
-  }, [data.transactions, totalExpenses])
+  }, [data.transactions, data.scheduledTransactions, totalExpenses])
 
   if (!isLoaded) {
     return (
@@ -219,10 +265,8 @@ export default function RelatoriosPage() {
               <p className="text-xl font-bold">{data.transactions.length}</p>
             </div>
             <div className="p-4 bg-secondary/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Categorias Utilizadas</p>
-              <p className="text-xl font-bold">
-                {new Set(data.transactions.map((t) => t.categoryId)).size}
-              </p>
+              <p className="text-sm text-muted-foreground">Contas Fixas Ativas</p>
+              <p className="text-xl font-bold">{data.fixedBills.filter((b) => b.isActive).length}</p>
             </div>
             <div className="p-4 bg-secondary/50 rounded-lg">
               <p className="text-sm text-muted-foreground">Metas Criadas</p>
