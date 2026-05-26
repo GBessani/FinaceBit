@@ -54,11 +54,18 @@ export default function RelatoriosPage() {
         }
       })
 
-    // Contas fixas ativas — somam em todos os meses do período
+    // Meses que têm pelo menos uma transação ou lançamento concluído
+    const monthsWithMovement = new Set([
+      ...data.transactions.map((t) => t.date.substring(0, 7)),
+      ...data.scheduledTransactions.filter((t) => t.isCompleted).map((t) => t.scheduledDate.substring(0, 7)),
+    ])
+
+    // Contas fixas ativas — somam apenas nos meses com movimento
     data.fixedBills
       .filter((b) => b.isActive)
       .forEach((b) => {
         Object.keys(months).forEach((key) => {
+          if (!monthsWithMovement.has(key)) return
           if (b.type === "income") months[key].income += b.amount
           else months[key].expense += b.amount
         })
