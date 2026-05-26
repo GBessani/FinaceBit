@@ -88,13 +88,19 @@ export function ExpenseChart() {
       )}
 
       {expensesByCategory.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {expensesByCategory.slice(0, 6).map((item) => (
-            <div key={item.name} className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="truncate">{item.name}</span>
-            </div>
-          ))}
+        <div className="mt-4 space-y-2">
+          {expensesByCategory.slice(0, 5).map((item) => {
+            const total = expensesByCategory.reduce((s, i) => s + i.value, 0)
+            const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : 0
+            return (
+              <div key={item.name} className="flex items-center gap-2 text-sm">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="truncate flex-1 text-muted-foreground">{item.name}</span>
+                <span className="text-xs text-muted-foreground">{pct}%</span>
+                <span className="font-medium shrink-0">{formatCurrency(item.value)}</span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

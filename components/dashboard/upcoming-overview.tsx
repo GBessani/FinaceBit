@@ -68,9 +68,10 @@ export function UpcomingOverview() {
         </CardHeader>
         <CardContent>
           {upcomingBills.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma conta fixa cadastrada
-            </p>
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">Nenhuma conta fixa vencendo em breve</p>
+              <a href="/contas-fixas" className="text-xs text-primary hover:underline mt-1 inline-block">Cadastrar conta fixa →</a>
+            </div>
           ) : (
             <div className="space-y-3">
               {upcomingBills.map((bill) => {
@@ -124,9 +125,10 @@ export function UpcomingOverview() {
         </CardHeader>
         <CardContent>
           {upcomingScheduled.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum lançamento agendado
-            </p>
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">Nenhum lançamento nos próximos 7 dias</p>
+              <a href="/lancamentos-futuros" className="text-xs text-primary hover:underline mt-1 inline-block">Agendar lançamento →</a>
+            </div>
           ) : (
             <div className="space-y-3">
               {upcomingScheduled.map((transaction) => {
