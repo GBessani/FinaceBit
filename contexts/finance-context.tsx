@@ -256,13 +256,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const getCategory = React.useCallback((id: string) => data.categories.find(c => c.id === id), [data.categories])
 
-  const getTotalIncome = React.useCallback((month?: string) =>
-    data.transactions.filter(t => t.type === "income" && (!month || t.date.startsWith(month))).reduce((s, t) => s + t.amount, 0)
-  , [data.transactions])
+  const getTotalIncome = React.useCallback((month?: string) => {
+    // Transações manuais
+    const txIncome = data.transactions
+      .filter(t => t.type === "income" && (!month || t.date.startsWith(month)))
+      .reduce((s, t) => s + t.amount, 0)
 
-  const getTotalExpenses = React.useCallback((month?: string) =>
-    data.transactions.filter(t => t.type === "expense" && (!month || t.date.startsWith(month))).reduce((s, t) => s + t.amount, 0)
-  , [data.transactions])
+    // Contas fixas ativas do tipo receita
+    const fixedIncome = data.fixedBills
+      .filter(b => b.isActive && b.type === "income")
+      .reduce((s, b) => s + b.amount, 0)
+
+    // Lançamentos futuros concluídos do tipo receita no mês
+    const scheduledIncome = data.scheduledTransactions
+      .filter(t => t.isCompleted && t.type === "income" && (!month || t.scheduledDate.startsWith(month)))
+      .reduce((s, t) => s + t.amount, 0)
+
+    return txIncome + fixedIncome + scheduledIncome
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
+
+  const getTotalExpenses = React.useCallback((month?: string) => {
+    // Transações manuais
+    const txExpenses = data.transactions
+      .filter(t => t.type === "expense" && (!month || t.date.startsWith(month)))
+      .reduce((s, t) => s + t.amount, 0)
+
+    // Contas fixas ativas do tipo despesa
+    const fixedExpenses = data.fixedBills
+      .filter(b => b.isActive && b.type === "expense")
+      .reduce((s, b) => s + b.amount, 0)
+
+    // Lançamentos futuros concluídos do tipo despesa no mês
+    const scheduledExpenses = data.scheduledTransactions
+      .filter(t => t.isCompleted && t.type === "expense" && (!month || t.scheduledDate.startsWith(month)))
+      .reduce((s, t) => s + t.amount, 0)
+
+    return txExpenses + fixedExpenses + scheduledExpenses
+  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
 
   const getBalance = React.useCallback((month?: string) => getTotalIncome(month) - getTotalExpenses(month), [getTotalIncome, getTotalExpenses])
 
