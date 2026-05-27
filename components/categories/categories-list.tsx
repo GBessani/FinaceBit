@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { Category } from "@/lib/types"
 import { generateId } from "@/lib/utils"
@@ -9,6 +10,7 @@ import { Plus, Trash2, X } from "lucide-react"
 
 export function CategoriesList() {
   const { data, addCategory, deleteCategory, isLoaded } = useFinance()
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense")
 
@@ -69,7 +71,7 @@ export function CategoriesList() {
             className="bg-card border border-border rounded-xl p-4 shadow-sm group relative"
           >
             <button
-              onClick={() => deleteCategory(category.id)}
+              onClick={() => setDeleteId(category.id)}
               className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -97,6 +99,13 @@ export function CategoriesList() {
           }}
         />
       )}
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir categoria?"
+      description="A categoria será removida. Transações vinculadas ficam sem categoria."
+      onConfirm={() => { deleteId && deleteCategory(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }
@@ -221,6 +230,13 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
           </button>
         </form>
       </div>
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir categoria?"
+        description="A categoria será removida. Transações vinculadas ficam sem categoria."
+        onConfirm={() => { deleteId && deleteCategory(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
   TrendingUp, TrendingDown, Plus, Trash2, Pencil,
   RefreshCw, Bitcoin, BarChart2, LineChart, Loader2,
 } from "lucide-react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 
 interface PriceData {
   price: number
@@ -52,6 +53,7 @@ export default function InvestimentosPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isFetchingCurrentPrice, setIsFetchingCurrentPrice] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const tickerDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -303,7 +305,7 @@ export default function InvestimentosPage() {
                       <button onClick={() => openEdit(inv)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </button>
-                      <button onClick={() => deleteInvestment(inv.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors">
+                      <button onClick={() => setDeleteId(inv.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </button>
                     </div>
@@ -314,6 +316,14 @@ export default function InvestimentosPage() {
           })}
         </div>
       )}
+
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir investimento?"
+        description="O investimento será removido permanentemente."
+        onConfirm={() => { deleteId && deleteInvestment(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">

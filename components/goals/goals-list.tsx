@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { Goal } from "@/lib/types"
 import { generateId, formatCurrency } from "@/lib/utils"
@@ -8,6 +9,7 @@ import { Plus, Target, Trash2, X, Edit3, Check } from "lucide-react"
 
 export function GoalsList() {
   const { data, addGoal, updateGoal, deleteGoal, isLoaded } = useFinance()
+  const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
 
@@ -91,7 +93,7 @@ export function GoalsList() {
                       <Edit3 className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => deleteGoal(goal.id)}
+                      onClick={() => setDeleteId(goal.id)}
                       className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -148,6 +150,13 @@ export function GoalsList() {
           }}
         />
       )}
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir meta?"
+      description="A meta será removida permanentemente."
+      onConfirm={() => { deleteId && deleteGoal(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }
@@ -281,6 +290,13 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
           </button>
         </form>
       </div>
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir meta?"
+      description="A meta será removida permanentemente."
+      onConfirm={() => { deleteId && deleteGoal(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }

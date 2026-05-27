@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { Transaction, TransactionType } from "@/lib/types"
 import { generateId, formatCurrency, formatDate } from "@/lib/utils"
 import { CategoryIcon } from "@/components/category-icon"
@@ -17,6 +18,7 @@ import {
 
 export function TransactionsList() {
   const { data, addTransaction, deleteTransaction, getCategory, isLoaded } = useFinance()
+  const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<TransactionType | "all">("all")
@@ -130,7 +132,7 @@ export function TransactionsList() {
                   </div>
 
                   <button
-                    onClick={() => deleteTransaction(transaction.id)}
+                    onClick={() => setDeleteId(transaction.id)}
                     className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -151,6 +153,13 @@ export function TransactionsList() {
           }}
         />
       )}
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir transação?"
+      description="A transação será removida permanentemente."
+      onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }
@@ -291,6 +300,13 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
           </button>
         </form>
       </div>
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir transação?"
+      description="A transação será removida permanentemente."
+      onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }

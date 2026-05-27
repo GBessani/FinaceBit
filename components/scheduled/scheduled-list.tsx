@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { ScheduledTransaction } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,6 +40,7 @@ export function ScheduledList() {
     getCategory,
   } = useFinance()
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [editingTransaction, setEditingTransaction] = React.useState<ScheduledTransaction | null>(null)
   const [description, setDescription] = React.useState("")
   const [amount, setAmount] = React.useState("")
@@ -217,7 +219,7 @@ export function ScheduledList() {
             <p className={`font-semibold ${transaction.type === "expense" ? "text-destructive" : "text-primary"}`}>
               {transaction.type === "expense" ? "-" : "+"}{formatCurrency(transaction.amount)}
             </p>
-            {showActions && !transaction.isCompleted && (
+            {showActions && (
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -238,7 +240,7 @@ export function ScheduledList() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => deleteScheduledTransaction(transaction.id)}
+                  onClick={() => setDeleteId(transaction.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -476,6 +478,13 @@ export function ScheduledList() {
           )}
         </div>
       )}
+    <DeleteConfirm
+      isOpen={!!deleteId}
+      title="Excluir lançamento?"
+      description="O lançamento será removido permanentemente."
+      onConfirm={() => { deleteId && deleteScheduledTransaction(deleteId); setDeleteId(null) }}
+      onCancel={() => setDeleteId(null)}
+    />
     </div>
   )
 }

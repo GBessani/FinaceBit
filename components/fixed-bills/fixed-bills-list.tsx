@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { FixedBill, RecurrenceType } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,6 +36,7 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
 
 export function FixedBillsList() {
   const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory } = useFinance()
+  const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
   const [description, setDescription] = React.useState("")
@@ -336,7 +338,7 @@ export function FixedBillsList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => deleteFixedBill(bill.id)}
+                              onClick={() => setDeleteId(bill.id)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -407,7 +409,7 @@ export function FixedBillsList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => deleteFixedBill(bill.id)}
+                              onClick={() => setDeleteId(bill.id)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
