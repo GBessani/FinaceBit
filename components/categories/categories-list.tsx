@@ -99,13 +99,13 @@ export function CategoriesList() {
           }}
         />
       )}
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir categoria?"
-      description="A categoria será removida. Transações vinculadas ficam sem categoria."
-      onConfirm={() => { deleteId && deleteCategory(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir categoria?"
+        description="A categoria será removida. Transações vinculadas ficam sem categoria."
+        onConfirm={() => { deleteId && deleteCategory(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
@@ -230,13 +230,6 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
           </button>
         </form>
       </div>
-      <DeleteConfirm
-        isOpen={!!deleteId}
-        title="Excluir categoria?"
-        description="A categoria será removida. Transações vinculadas ficam sem categoria."
-        onConfirm={() => { deleteId && deleteCategory(deleteId); setDeleteId(null) }}
-        onCancel={() => setDeleteId(null)}
-      />
     </div>
   )
 }

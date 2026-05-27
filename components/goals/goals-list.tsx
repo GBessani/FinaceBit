@@ -9,7 +9,7 @@ import { Plus, Target, Trash2, X, Edit3, Check } from "lucide-react"
 
 export function GoalsList() {
   const { data, addGoal, updateGoal, deleteGoal, isLoaded } = useFinance()
-  const [deleteId, setDeleteId] = React.useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
 
@@ -150,13 +150,13 @@ export function GoalsList() {
           }}
         />
       )}
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir meta?"
-      description="A meta será removida permanentemente."
-      onConfirm={() => { deleteId && deleteGoal(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir meta?"
+        description="A meta será removida permanentemente."
+        onConfirm={() => { deleteId && deleteGoal(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
@@ -290,13 +290,6 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
           </button>
         </form>
       </div>
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir meta?"
-      description="A meta será removida permanentemente."
-      onConfirm={() => { deleteId && deleteGoal(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
     </div>
   )
 }

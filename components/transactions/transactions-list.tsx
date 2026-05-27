@@ -18,7 +18,7 @@ import {
 
 export function TransactionsList() {
   const { data, addTransaction, deleteTransaction, getCategory, isLoaded } = useFinance()
-  const [deleteId, setDeleteId] = React.useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<TransactionType | "all">("all")
@@ -153,13 +153,6 @@ export function TransactionsList() {
           }}
         />
       )}
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir transação?"
-      description="A transação será removida permanentemente."
-      onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
     </div>
   )
 }
@@ -300,13 +293,6 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
           </button>
         </form>
       </div>
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir transação?"
-      description="A transação será removida permanentemente."
-      onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
     </div>
   )
 }
