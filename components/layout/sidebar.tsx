@@ -103,7 +103,7 @@ export function Sidebar() {
           {/* User info + Logout */}
           <div className="pt-4 border-t border-sidebar-border space-y-3">
             {user && (
-              <div className="flex items-center gap-2 px-1">
+              <Link href="/perfil" className="flex items-center gap-2 px-1 hover:opacity-80 transition-opacity">
                 {user.user_metadata?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -119,7 +119,7 @@ export function Sidebar() {
                 <span className="text-xs text-muted-foreground truncate flex-1">
                   {user.user_metadata?.full_name ?? user.email}
                 </span>
-              </div>
+              </Link>
             )}
             <div className="flex items-center gap-2">
               <button
