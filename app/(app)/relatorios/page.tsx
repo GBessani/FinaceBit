@@ -55,42 +55,22 @@ export default function RelatoriosPage() {
       })
 
     // Meses que têm pelo menos uma transação ou lançamento concluído
-    const monthsWithMovement = new Set([
-      ...data.transactions.map((t) => t.date.substring(0, 7)),
-      ...data.scheduledTransactions.filter((t) => t.isCompleted).map((t) => t.scheduledDate.substring(0, 7)),
-    ])
 
-    // Contas fixas ativas — somam apenas nos meses com movimento
-    data.fixedBills
-      .filter((b) => b.isActive)
-      .forEach((b) => {
-        Object.keys(months).forEach((key) => {
-          if (!monthsWithMovement.has(key)) return
-          if (b.type === "income") months[key].income += b.amount
-          else months[key].expense += b.amount
-        })
-      })
 
     let runningBalance = 0
     return Object.values(months).map((m) => {
       runningBalance += m.income - m.expense
       return { ...m, balance: runningBalance }
     })
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
+  }, [data.transactions])
 
-  const totalIncome = useMemo(() => {
-    const txIncome = data.transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-    const fixedIncome = data.fixedBills.filter((b) => b.isActive && b.type === "income").reduce((s, b) => s + b.amount, 0)
-    const scheduledIncome = data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "income").reduce((s, t) => s + t.amount, 0)
-    return txIncome + fixedIncome + scheduledIncome
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
+  const totalIncome = useMemo(() =>
+    data.transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  , [data.transactions])
 
-  const totalExpenses = useMemo(() => {
-    const txExpenses = data.transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-    const fixedExpenses = data.fixedBills.filter((b) => b.isActive && b.type === "expense").reduce((s, b) => s + b.amount, 0)
-    const scheduledExpenses = data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "expense").reduce((s, t) => s + t.amount, 0)
-    return txExpenses + fixedExpenses + scheduledExpenses
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
+  const totalExpenses = useMemo(() =>
+    data.transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  , [data.transactions])
 
   const expensesByCategory = useMemo(() => {
     const grouped: Record<string, { name: string; value: number; color: string }> = {}
@@ -106,27 +86,15 @@ export default function RelatoriosPage() {
         grouped[name].value += t.amount
       })
 
-    // Contas fixas ativas de despesa
-    data.fixedBills
-      .filter((b) => b.isActive && b.type === "expense")
-      .forEach((b) => {
-        const category = getCategory(b.categoryId)
-        const name = category?.name || "Outros"
-        const color = category?.color || "#6b7280"
-        if (!grouped[name]) grouped[name] = { name, value: 0, color }
-        grouped[name].value += b.amount
-      })
-
     return Object.values(grouped).sort((a, b) => b.value - a.value)
   }, [data.transactions, getCategory])
 
   const averageMonthlyExpense = useMemo(() => {
-    const monthsWithData = new Set([
-      ...data.transactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7)),
-      ...data.scheduledTransactions.filter((t) => t.isCompleted && t.type === "expense").map((t) => t.scheduledDate.substring(0, 7)),
-    ]).size
+    const monthsWithData = new Set(
+      data.transactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7))
+    ).size
     return monthsWithData > 0 ? totalExpenses / monthsWithData : 0
-  }, [data.transactions, data.scheduledTransactions, totalExpenses])
+  }, [data.transactions, totalExpenses])
 
   if (!isLoaded) {
     return (

@@ -9,14 +9,37 @@ import {
 import { useState, useMemo } from "react"
 
 export function DashboardSummary() {
-  const { getTotalIncome, getTotalExpenses, getBalance, isLoaded } = useFinance()
+  const { getTotalIncome, getTotalExpenses, getBalance, isLoaded, data } = useFinance()
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth())
 
   const { year, month } = parseMonth(currentMonth)
 
-  const income = useMemo(() => getTotalIncome(currentMonth), [getTotalIncome, currentMonth])
-  const expenses = useMemo(() => getTotalExpenses(currentMonth), [getTotalExpenses, currentMonth])
-  const balance = useMemo(() => getBalance(currentMonth), [getBalance, currentMonth])
+  // Verifica se o mês selecionado é futuro
+  const now = new Date()
+  const isFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth())
+
+  // Previsão para meses futuros: contas fixas + lançamentos pendentes
+  const forecastIncome = useMemo(() => {
+    if (!isFutureMonth) return null
+    const fixed = data.fixedBills.filter(b => b.isActive && b.type === "income").reduce((s, b) => s + b.amount, 0)
+    const scheduled = data.scheduledTransactions
+      .filter(t => !t.isCompleted && t.type === "income" && t.scheduledDate.startsWith(currentMonth))
+      .reduce((s, t) => s + t.amount, 0)
+    return fixed + scheduled
+  }, [isFutureMonth, data.fixedBills, data.scheduledTransactions, currentMonth])
+
+  const forecastExpenses = useMemo(() => {
+    if (!isFutureMonth) return null
+    const fixed = data.fixedBills.filter(b => b.isActive && b.type === "expense").reduce((s, b) => s + b.amount, 0)
+    const scheduled = data.scheduledTransactions
+      .filter(t => !t.isCompleted && t.type === "expense" && t.scheduledDate.startsWith(currentMonth))
+      .reduce((s, t) => s + t.amount, 0)
+    return fixed + scheduled
+  }, [isFutureMonth, data.fixedBills, data.scheduledTransactions, currentMonth])
+
+  const income = useMemo(() => forecastIncome ?? getTotalIncome(currentMonth), [forecastIncome, getTotalIncome, currentMonth])
+  const expenses = useMemo(() => forecastExpenses ?? getTotalExpenses(currentMonth), [forecastExpenses, getTotalExpenses, currentMonth])
+  const balance = useMemo(() => income - expenses, [income, expenses])
 
   // Mês anterior para comparativo
   const prevMonthKey = useMemo(() => {
@@ -63,9 +86,12 @@ export function DashboardSummary() {
           <button onClick={prevMonth} className="p-2 hover:bg-secondary rounded-lg transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-xl font-semibold w-36 text-center">
-            {getMonthName(month)} {year}
-          </h2>
+          <div className="text-center w-36">
+            <h2 className="text-xl font-semibold">{getMonthName(month)} {year}</h2>
+            {isFutureMonth && (
+              <span className="text-xs text-muted-foreground">🔮 previsão</span>
+            )}
+          </div>
           <button onClick={nextMonth} className="p-2 hover:bg-secondary rounded-lg transition-colors">
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -87,7 +113,7 @@ export function DashboardSummary() {
         {/* Receitas */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Receitas</span>
+            <span className="text-sm text-muted-foreground">{isFutureMonth ? "Previsão Receitas" : "Receitas"}</span>
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
               <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
@@ -106,7 +132,7 @@ export function DashboardSummary() {
         {/* Despesas */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Despesas</span>
+            <span className="text-sm text-muted-foreground">{isFutureMonth ? "Previsão Despesas" : "Despesas"}</span>
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
               <ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
@@ -136,7 +162,7 @@ export function DashboardSummary() {
         {/* Saldo */}
         <div className={`border rounded-xl p-5 shadow-sm ${balance >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Saldo</span>
+            <span className="text-sm text-muted-foreground">{isFutureMonth ? "Saldo Previsto" : "Saldo"}</span>
             <div className={`p-2 rounded-lg ${balance >= 0 ? "bg-primary/10" : "bg-red-100 dark:bg-red-900/30"}`}>
               {balance >= 0 ? (
                 <Wallet className="h-4 w-4 text-primary" />

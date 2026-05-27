@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { CategoryIcon } from "@/components/category-icon"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, getMonthName } from "@/lib/utils"
 import { format, differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Plus, Trash2, Edit, CalendarClock, CheckCircle2, Clock, AlertCircle } from "lucide-react"
@@ -155,16 +155,44 @@ export function ScheduledList() {
     .filter((t) => !t.isCompleted)
     .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
 
-  const completedTransactions = data.scheduledTransactions
-    .filter((t) => t.isCompleted)
-    .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
-    .slice(0, 10)
-
   const overdueTransactions = pendingTransactions.filter(
     (t) => isBefore(parseISO(t.scheduledDate), today) && !isToday(parseISO(t.scheduledDate))
   )
   const todayTransactions = pendingTransactions.filter((t) => isToday(parseISO(t.scheduledDate)))
   const upcomingTransactions = pendingTransactions.filter((t) => isAfter(parseISO(t.scheduledDate), today))
+
+  // Agrupa por mês → por categoria
+  const groupedByMonth = React.useMemo(() => {
+    const months: Record<string, {
+      label: string
+      key: string
+      transactions: typeof pendingTransactions
+      byCategory: Record<string, { name: string; color: string; icon: string; transactions: typeof pendingTransactions }>
+    }> = {}
+
+    upcomingTransactions.forEach(t => {
+      const monthKey = t.scheduledDate.substring(0, 7)
+      const date = new Date(t.scheduledDate + "T00:00:00")
+      const label = `${getMonthName(date.getMonth())} ${date.getFullYear()}`
+
+      if (!months[monthKey]) {
+        months[monthKey] = { label, key: monthKey, transactions: [], byCategory: {} }
+      }
+      months[monthKey].transactions.push(t)
+
+      const cat = getCategory(t.categoryId)
+      const catName = cat?.name || "Sem Categoria"
+      const catColor = cat?.color || "#6b7280"
+      const catIcon = cat?.icon || "Wallet"
+
+      if (!months[monthKey].byCategory[catName]) {
+        months[monthKey].byCategory[catName] = { name: catName, color: catColor, icon: catIcon, transactions: [] }
+      }
+      months[monthKey].byCategory[catName].transactions.push(t)
+    })
+
+    return Object.values(months).sort((a, b) => a.key.localeCompare(b.key))
+  }, [upcomingTransactions, getCategory])
 
   const totalPendingExpenses = pendingTransactions
     .filter((t) => t.type === "expense")
@@ -417,7 +445,7 @@ export function ScheduledList() {
         </Card>
       </div>
 
-      {pendingTransactions.length === 0 && completedTransactions.length === 0 ? (
+      {pendingTransactions.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CalendarClock className="h-12 w-12 text-muted-foreground mb-4" />
@@ -455,27 +483,54 @@ export function ScheduledList() {
             </div>
           )}
 
-          {upcomingTransactions.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Próximos</h3>
-              <div className="space-y-2">
-                {upcomingTransactions.map((t) => (
-                  <TransactionCard key={t.id} transaction={t} />
-                ))}
+          {groupedByMonth.map(month => (
+            <div key={month.key}>
+              {/* Header do mês */}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-lg">{month.label}</h3>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="text-red-500">
+                    -{formatCurrency(month.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0))}
+                  </span>
+                  <span className="text-emerald-500">
+                    +{formatCurrency(month.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0))}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
 
-          {completedTransactions.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3 text-muted-foreground">Concluídos Recentemente</h3>
-              <div className="space-y-2">
-                {completedTransactions.map((t) => (
-                  <TransactionCard key={t.id} transaction={t} showActions={false} />
+              {/* Agrupado por categoria */}
+              <div className="space-y-3">
+                {Object.values(month.byCategory).sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+                  <div key={cat.name} className="bg-card border border-border rounded-xl overflow-hidden">
+                    {/* Header da categoria */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-secondary/30 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
+                        <span className="text-sm font-semibold">{cat.name}</span>
+                        <span className="text-xs text-muted-foreground">({cat.transactions.length})</span>
+                      </div>
+                      <span className={`text-sm font-semibold ${
+                        cat.transactions[0]?.type === "income"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}>
+                        {cat.transactions[0]?.type === "income" ? "+" : "-"}
+                        {formatCurrency(cat.transactions.reduce((s, t) => s + t.amount, 0))}
+                      </span>
+                    </div>
+                    {/* Transações da categoria */}
+                    <div className="divide-y divide-border">
+                      {cat.transactions.map(t => (
+                        <TransactionCard key={t.id} transaction={t} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
+          ))}
+
+
         </div>
       )}
     <DeleteConfirm

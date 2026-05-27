@@ -26,30 +26,8 @@ export function ExpenseChart() {
         grouped[name].value += t.amount
       })
 
-    // Contas fixas ativas
-    data.fixedBills
-      .filter(b => b.isActive && b.type === "expense")
-      .forEach(b => {
-        const cat = getCategory(b.categoryId)
-        const name = cat?.name || "Outros"
-        const color = cat?.color || "#6b7280"
-        if (!grouped[name]) grouped[name] = { name, value: 0, color }
-        grouped[name].value += b.amount
-      })
-
-    // Lançamentos futuros do mês (concluídos ou não)
-    data.scheduledTransactions
-      .filter(t => t.type === "expense" && t.scheduledDate.startsWith(currentMonth))
-      .forEach(t => {
-        const cat = getCategory(t.categoryId)
-        const name = cat?.name || "Outros"
-        const color = cat?.color || "#6b7280"
-        if (!grouped[name]) grouped[name] = { name, value: 0, color }
-        grouped[name].value += t.amount
-      })
-
     return Object.values(grouped).sort((a, b) => b.value - a.value)
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions, getCategory, currentMonth])
+  }, [data.transactions, getCategory, currentMonth])
 
   if (!isLoaded) {
     return (
@@ -139,21 +117,15 @@ export function MonthlyChart() {
       const key = t.date.substring(0, 7)
       if (!months[key]) return
       if (t.type === "income") months[key].income += t.amount
-      else months[key].expense += t.amount
+      else if (t.type === "expense") months[key].expense += t.amount
     })
 
-    // Contas fixas — meses com movimento = real, meses futuros = previsão
+    // Contas fixas — apenas previsão no mês futuro
     data.fixedBills.filter(b => b.isActive).forEach(b => {
       Object.keys(months).forEach(key => {
-        const isFutureMonth = months[key].isFuture
-        if (isFutureMonth) {
-          if (b.type === "income") months[key].forecastIncome += b.amount
-          else months[key].forecastExpense += b.amount
-        } else {
-          if (!monthsWithMovement.has(key)) return
-          if (b.type === "income") months[key].income += b.amount
-          else months[key].expense += b.amount
-        }
+        if (!months[key].isFuture) return
+        if (b.type === "income") months[key].forecastIncome += b.amount
+        else months[key].forecastExpense += b.amount
       })
     })
 
