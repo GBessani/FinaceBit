@@ -117,19 +117,8 @@ export default function RelatoriosPage() {
         grouped[name].value += b.amount
       })
 
-    // Lançamentos futuros concluídos de despesa
-    data.scheduledTransactions
-      .filter((t) => t.isCompleted && t.type === "expense")
-      .forEach((t) => {
-        const category = getCategory(t.categoryId)
-        const name = category?.name || "Outros"
-        const color = category?.color || "#6b7280"
-        if (!grouped[name]) grouped[name] = { name, value: 0, color }
-        grouped[name].value += t.amount
-      })
-
     return Object.values(grouped).sort((a, b) => b.value - a.value)
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions, getCategory])
+  }, [data.transactions, getCategory])
 
   const averageMonthlyExpense = useMemo(() => {
     const monthsWithData = new Set([

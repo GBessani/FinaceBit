@@ -157,14 +157,6 @@ export function MonthlyChart() {
       })
     })
 
-    // Lançamentos futuros concluídos → somam no real
-    data.scheduledTransactions.filter(t => t.isCompleted).forEach(t => {
-      const key = t.scheduledDate.substring(0, 7)
-      if (!months[key]) return
-      if (t.type === "income") months[key].income += t.amount
-      else months[key].expense += t.amount
-    })
-
     // Lançamentos futuros NÃO concluídos → somam na previsão
     data.scheduledTransactions.filter(t => !t.isCompleted).forEach(t => {
       const key = t.scheduledDate.substring(0, 7)

@@ -15,6 +15,8 @@ import {
   Trash2,
   X,
   Filter,
+  ArrowLeftRight,
+  Copy,
 } from "lucide-react"
 
 export function TransactionsList() {
@@ -72,13 +74,22 @@ export function TransactionsList() {
             </select>
           </div>
 
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Nova Transação</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowTransfer(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-sm"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Transferência</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nova Transação</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -155,6 +166,14 @@ export function TransactionsList() {
           }}
         />
       )}
+      {showTransfer && <TransferForm onClose={() => setShowTransfer(false)} />}
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir transação?"
+        description="A transação será removida permanentemente."
+        onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
