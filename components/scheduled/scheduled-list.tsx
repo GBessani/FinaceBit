@@ -466,16 +466,7 @@ export function ScheduledList() {
             </div>
           )}
 
-          {completedTransactions.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3 text-muted-foreground">Concluídos Recentemente</h3>
-              <div className="space-y-2">
-                {completedTransactions.map((t) => (
-                  <TransactionCard key={t.id} transaction={t} showActions={false} />
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
       )}
     <DeleteConfirm

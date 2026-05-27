@@ -12,12 +12,26 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Trash2,
+  Copy,
   X,
   Filter,
 } from "lucide-react"
 
 export function TransactionsList() {
   const { data, addTransaction, deleteTransaction, getCategory, isLoaded } = useFinance()
+
+  async function handleRepeat(transaction: typeof data.transactions[0]) {
+    const todayStr = new Date().toISOString().split("T")[0]
+    await addTransaction({
+      id: "",
+      description: transaction.description,
+      amount: transaction.amount,
+      type: transaction.type,
+      categoryId: transaction.categoryId,
+      date: todayStr,
+      notes: transaction.notes,
+    })
+  }
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -131,12 +145,22 @@ export function TransactionsList() {
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => setDeleteId(transaction.id)}
-                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleRepeat(transaction)}
+                      className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Repetir hoje"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteId(transaction.id)}
+                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )
@@ -153,6 +177,13 @@ export function TransactionsList() {
           }}
         />
       )}
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir transação?"
+        description="A transação será removida permanentemente."
+        onConfirm={() => { deleteId && deleteTransaction(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }

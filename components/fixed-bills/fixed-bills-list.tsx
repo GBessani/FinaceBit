@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import * as React from "react"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
@@ -36,7 +37,7 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
 
 export function FixedBillsList() {
   const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory } = useFinance()
-  const [deleteId, setDeleteId] = React.useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
   const [description, setDescription] = React.useState("")
@@ -424,6 +425,13 @@ export function FixedBillsList() {
           )}
         </div>
       )}
+      <DeleteConfirm
+        isOpen={!!deleteId}
+        title="Excluir conta fixa?"
+        description="A conta fixa será removida permanentemente."
+        onConfirm={() => { deleteId && deleteFixedBill(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
