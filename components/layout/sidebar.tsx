@@ -15,6 +15,7 @@ import {
   CalendarClock,
   LogOut,
   TrendingUp,
+  CreditCard,
 } from "lucide-react"
 import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/transacoes", label: "Transações", icon: ArrowLeftRight },
   { href: "/lancamentos-futuros", label: "Lançamentos Futuros", icon: CalendarClock },
   { href: "/contas-fixas", label: "Contas Fixas", icon: RefreshCw },
+  { href: "/cartoes", label: "Cartões de Crédito", icon: CreditCard },
   { href: "/metas", label: "Metas", icon: Target },
   { href: "/categorias", label: "Categorias", icon: Tags },
   { href: "/investimentos", label: "Investimentos", icon: TrendingUp },

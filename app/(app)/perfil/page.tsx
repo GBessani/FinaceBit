@@ -4,7 +4,7 @@ import { useFinance } from "@/contexts/finance-context"
 import { useRouter } from "next/navigation"
 import {
   User, Mail, Calendar, LogOut, Shield, Trash2,
-  ChevronRight, ExternalLink, Camera, Loader2,
+  ChevronRight, ExternalLink, Camera, Loader2, Wallet, Pencil, Check, X as XIcon,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useState, useRef, useEffect } from "react"
@@ -12,10 +12,12 @@ import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 
 export default function PerfilPage() {
-  const { user, data, signOut } = useFinance()
+  const { user, data, signOut, initialBalance, setInitialBalance } = useFinance()
   const router = useRouter()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [editingBalance, setEditingBalance] = useState(false)
+  const [balanceInput, setBalanceInput] = useState("")
   const [customAvatar, setCustomAvatar] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -260,6 +262,72 @@ export default function PerfilPage() {
             </p>
             <p className="text-xs text-muted-foreground mt-1">Despesas</p>
           </div>
+        </div>
+      </div>
+
+      {/* Saldo Inicial */}
+      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Saldo Inicial</p>
+          {!editingBalance && (
+            <button
+              onClick={() => { setBalanceInput(initialBalance.toString()); setEditingBalance(true) }}
+              className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+            >
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        <div className="px-5 py-4">
+          {editingBalance ? (
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">Valor em R$</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={balanceInput}
+                  onChange={e => setBalanceInput(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={async () => {
+                    await setInitialBalance(parseFloat(balanceInput) || 0)
+                    setEditingBalance(false)
+                    toast.success("Saldo inicial salvo!")
+                  }}
+                  className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setEditingBalance(false)}
+                  className="p-2 border border-border rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Wallet className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saldo antes de usar o FinaceBit</p>
+                <p className="text-xl font-bold">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(initialBalance)}
+                </p>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground mt-3">
+            Este valor é somado ao seu saldo total no dashboard, representando o dinheiro que você já tinha antes de começar a usar o FinaceBit.
+          </p>
         </div>
       </div>
 

@@ -60,6 +60,7 @@ export interface ScheduledTransaction {
 
 export interface FinancialData {
   investments: Investment[]
+  creditCards: CreditCard[]
   transactions: Transaction[]
   categories: Category[]
   goals: Goal[]
@@ -92,4 +93,14 @@ export interface Investment {
   quantity: number
   avgPrice: number
   notes?: string
+}
+
+export interface CreditCard {
+  id: string
+  name: string
+  limitAmount: number
+  dueDay: number      // dia do vencimento
+  closingDay: number  // dia do fechamento (calculado: dueDay - 7)
+  color: string
+  isActive: boolean
 }

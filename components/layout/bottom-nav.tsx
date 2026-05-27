@@ -14,6 +14,7 @@ import {
   TrendingUp,
   LogOut,
   X,
+  CreditCard,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
@@ -29,6 +30,7 @@ const mainNav = [
 const moreNav = [
   { href: "/lancamentos-futuros", label: "Lançamentos Futuros", icon: CalendarClock },
   { href: "/contas-fixas", label: "Contas Fixas", icon: RefreshCw },
+  { href: "/cartoes", label: "Cartões", icon: CreditCard },
   { href: "/investimentos", label: "Investimentos", icon: TrendingUp },
   { href: "/categorias", label: "Categorias", icon: Tags },
 ]
