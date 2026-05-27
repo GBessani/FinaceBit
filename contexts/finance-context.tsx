@@ -12,6 +12,7 @@ import {
   Investment,
 } from "@/lib/types"
 import { User } from "@supabase/supabase-js"
+import { toast } from "sonner"
 
 function mapCategory(row: Record<string, unknown>): Category {
   return {
@@ -175,11 +176,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = React.useCallback(async (t: Transaction) => {
     if (!user) return
-    const { data: row } = await supabase.from("transactions").insert({
+    const { data: row, error } = await supabase.from("transactions").insert({
       user_id: user.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
     }).select().single()
-    if (row) setData(prev => ({ ...prev, transactions: [mapTransaction(row), ...prev.transactions] }))
+    if (error) { toast.error("Erro ao salvar transação."); return }
+    if (row) {
+      setData(prev => ({ ...prev, transactions: [mapTransaction(row), ...prev.transactions] }))
+      toast.success("Transação salva!")
+    }
   }, [user, supabase])
 
   const updateTransaction = React.useCallback(async (t: Transaction) => {
@@ -191,8 +196,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const deleteTransaction = React.useCallback(async (id: string) => {
-    await supabase.from("transactions").delete().eq("id", id)
+    const { error } = await supabase.from("transactions").delete().eq("id", id)
+    if (error) { toast.error("Erro ao remover transação."); return }
     setData(prev => ({ ...prev, transactions: prev.transactions.filter(t => t.id !== id) }))
+    toast.success("Transação removida!")
   }, [supabase])
 
   const addCategory = React.useCallback(async (c: Category) => {
@@ -210,11 +217,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addGoal = React.useCallback(async (g: Goal) => {
     if (!user) return
-    const { data: row } = await supabase.from("goals").insert({
+    const { data: row, error } = await supabase.from("goals").insert({
       user_id: user.id, name: g.name, target_amount: g.targetAmount,
       current_amount: g.currentAmount, deadline: g.deadline, color: g.color,
     }).select().single()
-    if (row) setData(prev => ({ ...prev, goals: [...prev.goals, mapGoal(row)] }))
+    if (error) { toast.error("Erro ao salvar meta."); return }
+    if (row) {
+      setData(prev => ({ ...prev, goals: [...prev.goals, mapGoal(row)] }))
+      toast.success("Meta criada!")
+    }
   }, [user, supabase])
 
   const updateGoal = React.useCallback(async (g: Goal) => {
@@ -226,8 +237,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const deleteGoal = React.useCallback(async (id: string) => {
-    await supabase.from("goals").delete().eq("id", id)
+    const { error } = await supabase.from("goals").delete().eq("id", id)
+    if (error) { toast.error("Erro ao remover meta."); return }
     setData(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }))
+    toast.success("Meta removida!")
   }, [supabase])
 
   const addFixedBill = React.useCallback(async (b: FixedBill) => {
@@ -271,6 +284,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }))
       } else {
         setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
+        toast.success("Conta fixa salva!")
       }
     }
   }, [user, supabase])
@@ -285,8 +299,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const deleteFixedBill = React.useCallback(async (id: string) => {
-    await supabase.from("fixed_bills").delete().eq("id", id)
+    const { error } = await supabase.from("fixed_bills").delete().eq("id", id)
+    if (error) { toast.error("Erro ao remover conta fixa."); return }
     setData(prev => ({ ...prev, fixedBills: prev.fixedBills.filter(b => b.id !== id) }))
+    toast.success("Conta fixa removida!")
   }, [supabase])
 
   const addScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
@@ -391,8 +407,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const deleteInvestment = React.useCallback(async (id: string) => {
-    await supabase.from("investments").delete().eq("id", id)
+    const { error } = await supabase.from("investments").delete().eq("id", id)
+    if (error) { toast.error("Erro ao remover investimento."); return }
     setData(prev => ({ ...prev, investments: prev.investments.filter(i => i.id !== id) }))
+    toast.success("Investimento removido!")
   }, [supabase])
 
   const signOut = React.useCallback(async () => { await supabase.auth.signOut() }, [supabase])

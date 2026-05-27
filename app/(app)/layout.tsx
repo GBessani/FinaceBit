@@ -2,6 +2,7 @@ import { FinanceProvider } from "@/contexts/finance-context"
 import { Sidebar } from "@/components/layout/sidebar"
 import { BottomNav } from "@/components/layout/bottom-nav"
 import { AIAssistant } from "@/components/ai/ai-assistant"
+import { Toaster } from "sonner"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <BottomNav />
 
         <AIAssistant />
+        <Toaster richColors position="top-right" />
       </div>
     </FinanceProvider>
   )
