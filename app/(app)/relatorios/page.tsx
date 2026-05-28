@@ -34,6 +34,18 @@ export default function RelatoriosPage() {
     { value: "custom", label: "Período personalizado" },
   ]
 
+  // Label do período para os títulos dos gráficos
+  const periodLabel = useMemo(() => {
+    if (preset === "3") return "Últimos 3 meses"
+    if (preset === "6") return "Últimos 6 meses"
+    if (preset === "all") return "Todo o histórico"
+    if (preset === "custom" && customStart && customEnd) {
+      const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+      return `${fmt(customStart)} a ${fmt(customEnd)}`
+    }
+    return "Últimos 12 meses"
+  }, [preset, customStart, customEnd])
+
   // Calcula datas de início e fim baseado no filtro
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
@@ -221,7 +233,7 @@ export default function RelatoriosPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-        <h3 className="font-semibold mb-4">Evolução do Saldo - Últimos 12 meses</h3>
+        <h3 className="font-semibold mb-4">Evolução do Saldo — {periodLabel}</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={yearlyData}>
@@ -250,7 +262,7 @@ export default function RelatoriosPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-          <h3 className="font-semibold mb-4">Despesas por Categoria - Total</h3>
+          <h3 className="font-semibold mb-4">Despesas por Categoria — {periodLabel}</h3>
           {expensesByCategory.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground">
               <p>Nenhuma despesa registrada</p>
