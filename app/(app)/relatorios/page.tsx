@@ -39,8 +39,13 @@ export default function RelatoriosPage() {
     const now = new Date()
     const end = now.toISOString().split("T")[0]
 
-    if (preset === "custom" && customStart && customEnd) {
-      return { startDate: customStart, endDate: customEnd }
+    // Se personalizado mas datas não preenchidas, usa 12 meses
+    if (preset === "custom") {
+      if (customStart && customEnd && customStart <= customEnd) {
+        return { startDate: customStart, endDate: customEnd }
+      }
+      const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+      return { startDate: start.toISOString().split("T")[0], endDate: end }
     }
     if (preset === "all") {
       return { startDate: "2000-01-01", endDate: end }
