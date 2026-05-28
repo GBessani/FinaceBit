@@ -11,6 +11,7 @@ import {
   ScheduledTransaction,
   Investment,
   CreditCard,
+  InvestmentTransaction,
 } from "@/lib/types"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
@@ -92,6 +93,19 @@ function mapCreditCard(row: Record<string, unknown>): CreditCard {
   }
 }
 
+function mapInvestmentTransaction(row: Record<string, unknown>): InvestmentTransaction {
+  return {
+    id: row.id as string,
+    investmentId: row.investment_id as string,
+    type: row.type as "buy" | "sell",
+    quantity: Number(row.quantity),
+    price: Number(row.price),
+    total: Number(row.total),
+    date: row.date as string,
+    notes: row.notes as string | undefined,
+  }
+}
+
 function mapInvestment(row: Record<string, unknown>): Investment {
   const quantity = Number(row.quantity)
   const avgPrice = Number(row.avg_price)
@@ -141,6 +155,9 @@ interface FinanceContextType {
   deleteInvestment: (id: string) => Promise<void>
   initialBalance: number
   setInitialBalance: (value: number) => Promise<void>
+  investmentTransactions: InvestmentTransaction[]
+  addInvestmentTransaction: (t: Omit<InvestmentTransaction, "id">) => Promise<void>
+  deleteInvestmentTransaction: (id: string) => Promise<void>
   creditCards: CreditCard[]
   addCreditCard: (card: CreditCard) => Promise<void>
   updateCreditCard: (card: CreditCard) => Promise<void>
@@ -162,12 +179,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     scheduledTransactions: [],
     investments: [],
     creditCards: [],
+    investmentTransactions: [],
   })
   const [isLoaded, setIsLoaded] = React.useState(false)
   const [initialBalance, setInitialBalanceState] = React.useState(0)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, scheduled, invs, cards] = await Promise.all([
+    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
@@ -175,6 +193,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       supabase.from("scheduled_transactions").select("*").eq("user_id", userId).order("scheduled_date"),
       supabase.from("investments").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("credit_cards").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("investment_transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
     ])
 
     setData({
@@ -185,6 +204,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       scheduledTransactions: (scheduled.data ?? []).map(mapScheduledTransaction),
       investments: (invs.data ?? []).map(mapInvestment),
       creditCards: (cards.data ?? []).map(mapCreditCard),
+      investmentTransactions: (invTxs.data ?? []).map(mapInvestmentTransaction),
     })
 
     // Load initial balance
@@ -447,6 +467,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setInitialBalanceState(value)
   }, [user, supabase])
 
+  const addInvestmentTransaction = React.useCallback(async (t: Omit<InvestmentTransaction, "id">) => {
+    if (!user) return
+    const { data: row, error } = await supabase.from("investment_transactions").insert({
+      user_id: user.id,
+      investment_id: t.investmentId,
+      type: t.type,
+      quantity: t.quantity,
+      price: t.price,
+      total: t.total,
+      date: t.date,
+      notes: t.notes ?? null,
+    }).select().single()
+    if (error) { toast.error("Erro ao salvar movimentação."); return }
+    if (row) {
+      const newTx = mapInvestmentTransaction(row)
+      setData(prev => ({ ...prev, investmentTransactions: [newTx, ...prev.investmentTransactions] }))
+      // Recalcula quantidade e preço médio do investimento
+      const allTxs = [newTx, ...prev.investmentTransactions.filter(x => x.investmentId === t.investmentId)]
+      const inv = prev.investments.find(i => i.id === t.investmentId)
+      if (inv) {
+        const buys = allTxs.filter(x => x.type === "buy")
+        const totalQty = buys.reduce((s, x) => s + x.quantity, 0) - allTxs.filter(x => x.type === "sell").reduce((s, x) => s + x.quantity, 0)
+        const totalInvested = buys.reduce((s, x) => s + x.total, 0)
+        const avgPrice = totalQty > 0 ? totalInvested / totalQty : 0
+        await supabase.from("investments").update({ quantity: totalQty, avg_price: avgPrice, invested_amount: totalInvested }).eq("id", inv.id)
+      }
+      toast.success(t.type === "buy" ? "Compra registrada!" : "Venda registrada!")
+    }
+  }, [user, supabase])
+
+  const deleteInvestmentTransaction = React.useCallback(async (id: string) => {
+    const { error } = await supabase.from("investment_transactions").delete().eq("id", id)
+    if (error) { toast.error("Erro ao remover movimentação."); return }
+    setData(prev => ({ ...prev, investmentTransactions: prev.investmentTransactions.filter(t => t.id !== id) }))
+    toast.success("Movimentação removida!")
+  }, [supabase])
+
   const addCreditCard = React.useCallback(async (card: CreditCard) => {
     if (!user) return
     const { data: row, error } = await supabase.from("credit_cards").insert({
@@ -492,6 +549,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       getUpcomingBills, getUpcomingScheduled, signOut,
       initialBalance, setInitialBalance,
       creditCards: data.creditCards,
+      investmentTransactions: data.investmentTransactions ?? [],
+      addInvestmentTransaction, deleteInvestmentTransaction,
       addCreditCard, updateCreditCard, deleteCreditCard,
       addInvestment, updateInvestment, deleteInvestment,
     }}>

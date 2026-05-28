@@ -25,11 +25,14 @@ const emptyFixed = {
 }
 
 export default function InvestimentosPage() {
-  const { data, addInvestment, updateInvestment, deleteInvestment, isLoaded } = useFinance()
+  const { data, addInvestment, updateInvestment, deleteInvestment, isLoaded, addInvestmentTransaction, deleteInvestmentTransaction } = useFinance()
   const [tab, setTab] = useState<Tab>("variable")
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [txModalId, setTxModalId] = useState<string | null>(null)
+  const [txForm, setTxForm] = useState({ type: "buy" as "buy" | "sell", quantity: "", price: "", date: new Date().toISOString().split("T")[0], notes: "" })
+  const [txDeleteId, setTxDeleteId] = useState<string | null>(null)
   const [prices, setPrices] = useState<Record<string, { price: number; change24h: number; name: string }>>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
   const [varForm, setVarForm] = useState(emptyVariable)
@@ -59,6 +62,24 @@ export default function InvestimentosPage() {
   }, [data.investments])
 
   useEffect(() => { fetchPrices() }, [fetchPrices])
+
+  // ─── Save investment transaction ─────────────────
+  async function saveTx() {
+    if (!txModalId) return
+    const qty = parseFloat(txForm.quantity.replace(",", "."))
+    const price = parseFloat(txForm.price.replace(",", "."))
+    if (!qty || !price) { toast.error("Informe quantidade e preço"); return }
+    await addInvestmentTransaction({
+      investmentId: txModalId,
+      type: txForm.type,
+      quantity: qty,
+      price,
+      total: qty * price,
+      date: txForm.date,
+      notes: txForm.notes || undefined,
+    })
+    setTxForm({ type: "buy", quantity: "", price: "", date: new Date().toISOString().split("T")[0], notes: "" })
+  }
 
   // ─── Debounce ticker search ───────────────────────
   function onTickerChange(ticker: string) {
@@ -309,11 +330,14 @@ export default function InvestimentosPage() {
                 </div>
 
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => openEdit(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  <button onClick={() => setTxModalId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 transition-colors">
+                    <ClockHistory className="h-3.5 w-3.5" /> Movimentações
                   </button>
-                  <button onClick={() => setDeleteId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-xs hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  <button onClick={() => openEdit(inv)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setDeleteId(inv.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-xs hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -397,11 +421,14 @@ export default function InvestimentosPage() {
                 </div>
 
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => openEdit(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  <button onClick={() => setTxModalId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 transition-colors">
+                    <ClockHistory className="h-3.5 w-3.5" /> Movimentações
                   </button>
-                  <button onClick={() => setDeleteId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-xs hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  <button onClick={() => openEdit(inv)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setDeleteId(inv.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-xs hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -573,6 +600,117 @@ export default function InvestimentosPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Movimentações */}
+      {txModalId && (() => {
+        const inv = data.investments.find(i => i.id === txModalId)
+        const txs = data.investmentTransactions.filter(t => t.investmentId === txModalId)
+        if (!inv) return null
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+            <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h3 className="font-semibold text-lg">{inv.name}</h3>
+                  <p className="text-sm text-muted-foreground">Histórico de movimentações</p>
+                </div>
+                <button onClick={() => setTxModalId(null)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Nova movimentação */}
+              <div className="p-5 border-b border-border space-y-3">
+                <p className="text-sm font-semibold">Nova movimentação</p>
+                <div className="flex gap-2">
+                  {[{ v: "buy", label: "Compra", icon: ArrowDownCircle }, { v: "sell", label: "Venda", icon: ArrowUpCircle }].map(({ v, label, icon: Icon }) => (
+                    <button key={v} onClick={() => setTxForm(p => ({ ...p, type: v as "buy" | "sell" }))}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        txForm.type === v
+                          ? v === "buy" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
+                          : "bg-secondary"
+                      }`}>
+                      <Icon className="h-4 w-4" /> {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Quantidade</label>
+                    <input value={txForm.quantity} onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
+                      placeholder="0.00" type="text"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Preço unit. (R$)</label>
+                    <input value={txForm.price} onChange={e => setTxForm(p => ({ ...p, price: e.target.value }))}
+                      placeholder="0.00" type="text"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Data</label>
+                    <input value={txForm.date} onChange={e => setTxForm(p => ({ ...p, date: e.target.value }))}
+                      type="date"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+                {txForm.quantity && txForm.price && (
+                  <p className="text-xs text-muted-foreground">
+                    Total: <strong>{formatCurrency(parseFloat(txForm.quantity.replace(",",".") || "0") * parseFloat(txForm.price.replace(",",".") || "0"))}</strong>
+                  </p>
+                )}
+                <button onClick={saveTx}
+                  className={`w-full py-2 rounded-lg text-sm font-medium text-white transition-colors ${txForm.type === "buy" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
+                  Registrar {txForm.type === "buy" ? "Compra" : "Venda"}
+                </button>
+              </div>
+
+              {/* Histórico */}
+              <div className="p-5">
+                <p className="text-sm font-semibold mb-3">Histórico</p>
+                {txs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma movimentação registrada</p>
+                ) : (
+                  <div className="space-y-2">
+                    {txs.map(tx => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {tx.type === "buy"
+                            ? <ArrowDownCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                            : <ArrowUpCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          }
+                          <div>
+                            <p className="text-sm font-medium">{tx.type === "buy" ? "Compra" : "Venda"} — {tx.quantity} un.</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(tx.date + "T00:00:00").toLocaleDateString("pt-BR")} • {formatCurrency(tx.price)}/un.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className={`font-semibold text-sm ${tx.type === "buy" ? "text-emerald-600" : "text-red-500"}`}>
+                            {tx.type === "buy" ? "-" : "+"}{formatCurrency(tx.total)}
+                          </p>
+                          <button onClick={() => setTxDeleteId(tx.id)} className="p-1 hover:bg-secondary rounded transition-colors">
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      <DeleteConfirm
+        isOpen={!!txDeleteId}
+        title="Remover movimentação?"
+        description="A movimentação será removida. O saldo do ativo será recalculado."
+        onConfirm={() => { txDeleteId && deleteInvestmentTransaction(txDeleteId); setTxDeleteId(null) }}
+        onCancel={() => setTxDeleteId(null)}
+      />
 
       <DeleteConfirm
         isOpen={!!deleteId}
