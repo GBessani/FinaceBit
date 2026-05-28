@@ -109,34 +109,52 @@ export default function RelatoriosPage() {
     })
   }, [filteredTransactions, startDate, endDate])
 
-  // Dados do gráfico de investimentos — evolução mensal
+  // Dados do gráfico de investimentos — evolução mensal baseada nas movimentações
   const investmentChartData = useMemo(() => {
-    const months: Record<string, { month: string; investido: number; atual: number }> = {}
+    const months: Record<string, { month: string; investido: number }> = {}
 
     const start = new Date(startDate)
     const end = new Date(endDate)
     const current = new Date(start.getFullYear(), start.getMonth(), 1)
     while (current <= end) {
       const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`
-      months[key] = { month: getMonthName(current.getMonth()).substring(0, 3), investido: 0, atual: 0 }
+      months[key] = { month: getMonthName(current.getMonth()).substring(0, 3), investido: 0 }
       current.setMonth(current.getMonth() + 1)
     }
 
-    // Para cada mês, soma os investimentos que já existiam naquele mês
-    data.investments.forEach(inv => {
-      if (!inv.investedAt) return
-      const invKey = inv.investedAt.substring(0, 7)
-      Object.keys(months).forEach(key => {
-        if (key >= invKey) {
-          months[key].investido = Math.round((months[key].investido + (inv.investedAmount ?? 0)) * 100) / 100
-          // Valor atual só no mês mais recente (usa avgPrice como proxy para meses passados)
-          months[key].atual = Math.round((months[key].atual + (inv.investedAmount ?? 0)) * 100) / 100
-        }
+    // Usa movimentações se existirem, senão usa investedAt do ativo
+    const hasTxs = data.investmentTransactions && data.investmentTransactions.length > 0
+
+    if (hasTxs) {
+      // Acumula compras e subtrai vendas mês a mês
+      const monthlyNet: Record<string, number> = {}
+      data.investmentTransactions.forEach(tx => {
+        const key = tx.date.substring(0, 7)
+        if (!monthlyNet[key]) monthlyNet[key] = 0
+        monthlyNet[key] += tx.type === "buy" ? tx.total : -tx.total
       })
-    })
+
+      // Acumula ao longo do tempo
+      let accumulated = 0
+      Object.keys(months).sort().forEach(key => {
+        accumulated = Math.round((accumulated + (monthlyNet[key] ?? 0)) * 100) / 100
+        months[key].investido = Math.max(0, accumulated)
+      })
+    } else {
+      // Fallback: usa investedAt do ativo
+      data.investments.forEach(inv => {
+        if (!inv.investedAt) return
+        const invKey = inv.investedAt.substring(0, 7)
+        Object.keys(months).forEach(key => {
+          if (key >= invKey) {
+            months[key].investido = Math.round((months[key].investido + (inv.investedAmount ?? 0)) * 100) / 100
+          }
+        })
+      })
+    }
 
     return Object.values(months)
-  }, [data.investments, startDate, endDate])
+  }, [data.investments, data.investmentTransactions, startDate, endDate])
 
   const totalIncome = useMemo(() =>
     filteredTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
