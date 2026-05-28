@@ -404,18 +404,32 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addInvestment = React.useCallback(async (inv: Investment) => {
     if (!user) return
-    const { data: row } = await supabase.from("investments").insert({
+    const { data: row, error } = await supabase.from("investments").insert({
       user_id: user.id, name: inv.name, ticker: inv.ticker,
       asset_type: inv.assetType, quantity: inv.quantity,
       avg_price: inv.avgPrice, notes: inv.notes ?? null,
+      invested_amount: inv.investedAmount ?? null,
+      invested_at: inv.investedAt ?? null,
+      rate: inv.rate ?? null,
+      rate_index: inv.rateIndex ?? null,
+      maturity_date: inv.maturityDate ?? null,
     }).select().single()
-    if (row) setData(prev => ({ ...prev, investments: [...prev.investments, mapInvestment(row)] }))
+    if (error) { toast.error("Erro ao salvar investimento."); return }
+    if (row) {
+      setData(prev => ({ ...prev, investments: [...prev.investments, mapInvestment(row)] }))
+      toast.success("Investimento salvo!")
+    }
   }, [user, supabase])
 
   const updateInvestment = React.useCallback(async (inv: Investment) => {
     const { data: row } = await supabase.from("investments").update({
       name: inv.name, ticker: inv.ticker, asset_type: inv.assetType,
       quantity: inv.quantity, avg_price: inv.avgPrice, notes: inv.notes ?? null,
+      invested_amount: inv.investedAmount ?? null,
+      invested_at: inv.investedAt ?? null,
+      rate: inv.rate ?? null,
+      rate_index: inv.rateIndex ?? null,
+      maturity_date: inv.maturityDate ?? null,
     }).eq("id", inv.id).select().single()
     if (row) setData(prev => ({ ...prev, investments: prev.investments.map(x => x.id === inv.id ? mapInvestment(row) : x) }))
   }, [supabase])
