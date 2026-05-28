@@ -26,7 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { CategoryIcon } from "@/components/category-icon"
 import { formatCurrency } from "@/lib/utils"
-import { Plus, Trash2, Edit, RefreshCw, Calendar, Pause, Play } from "lucide-react"
+import { Plus, Trash2, Edit, RefreshCw, Calendar, Pause, Play, CheckCircle } from "lucide-react"
 
 const recurrenceLabels: Record<RecurrenceType, string> = {
   monthly: "Mensal",
@@ -36,7 +36,7 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
 }
 
 export function FixedBillsList() {
-  const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory } = useFinance()
+  const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory, addTransaction } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
@@ -101,6 +101,19 @@ export function FixedBillsList() {
 
     setIsDialogOpen(false)
     resetForm()
+  }
+
+  const confirmBill = async (bill: FixedBill) => {
+    const today = new Date().toISOString().split("T")[0]
+    await addTransaction({
+      id: "",
+      description: bill.description,
+      amount: bill.amount,
+      type: bill.type as "income" | "expense",
+      categoryId: bill.categoryId,
+      date: today,
+      notes: `Confirmado de conta fixa`,
+    })
   }
 
   const toggleActive = (bill: FixedBill) => {
@@ -320,6 +333,24 @@ export function FixedBillsList() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => confirmBill(bill)}
+                              title="Confirmar pagamento"
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => confirmBill(bill)}
+                              title={bill.type === "income" ? "Confirmar recebimento" : "Confirmar pagamento"}
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => toggleActive(bill)}
                               title={bill.isActive ? "Pausar" : "Ativar"}
                             >
@@ -388,6 +419,15 @@ export function FixedBillsList() {
                             +{formatCurrency(bill.amount)}
                           </p>
                           <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => confirmBill(bill)}
+                              title={bill.type === "income" ? "Confirmar recebimento" : "Confirmar pagamento"}
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
