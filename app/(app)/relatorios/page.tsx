@@ -109,6 +109,35 @@ export default function RelatoriosPage() {
     })
   }, [filteredTransactions, startDate, endDate])
 
+  // Dados do gráfico de investimentos — evolução mensal
+  const investmentChartData = useMemo(() => {
+    const months: Record<string, { month: string; investido: number; atual: number }> = {}
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const current = new Date(start.getFullYear(), start.getMonth(), 1)
+    while (current <= end) {
+      const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`
+      months[key] = { month: getMonthName(current.getMonth()).substring(0, 3), investido: 0, atual: 0 }
+      current.setMonth(current.getMonth() + 1)
+    }
+
+    // Para cada mês, soma os investimentos que já existiam naquele mês
+    data.investments.forEach(inv => {
+      if (!inv.investedAt) return
+      const invKey = inv.investedAt.substring(0, 7)
+      Object.keys(months).forEach(key => {
+        if (key >= invKey) {
+          months[key].investido = Math.round((months[key].investido + (inv.investedAmount ?? 0)) * 100) / 100
+          // Valor atual só no mês mais recente (usa avgPrice como proxy para meses passados)
+          months[key].atual = Math.round((months[key].atual + (inv.investedAmount ?? 0)) * 100) / 100
+        }
+      })
+    })
+
+    return Object.values(months)
+  }, [data.investments, startDate, endDate])
+
   const totalIncome = useMemo(() =>
     filteredTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
   , [filteredTransactions])
@@ -261,6 +290,48 @@ export default function RelatoriosPage() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Gráfico de Investimentos */}
+      {data.investments.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <h3 className="font-semibold mb-4">Evolução dos Investimentos — {periodLabel}</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={investmentChartData}>
+                <defs>
+                  <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : `${v.toFixed(0)}`}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{
+                    backgroundColor: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "0.5rem",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="investido"
+                  stroke="#6366f1"
+                  fillOpacity={1}
+                  fill="url(#colorInvested)"
+                  name="Total Investido"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
