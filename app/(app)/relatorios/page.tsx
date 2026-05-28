@@ -102,8 +102,10 @@ export default function RelatoriosPage() {
 
     let runningBalance = 0
     return Object.values(months).map((m) => {
-      runningBalance += m.income - m.expense
-      return { ...m, balance: runningBalance }
+      const income = Math.round(m.income * 100) / 100
+      const expense = Math.round(m.expense * 100) / 100
+      runningBalance = Math.round((runningBalance + income - expense) * 100) / 100
+      return { ...m, income, expense, balance: runningBalance }
     })
   }, [filteredTransactions, startDate, endDate])
 
@@ -245,7 +247,7 @@ export default function RelatoriosPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={(v) => `${v / 1000}k`} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : `${v.toFixed(0)}`} />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{
