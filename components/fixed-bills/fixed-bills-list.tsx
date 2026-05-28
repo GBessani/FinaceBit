@@ -42,7 +42,7 @@ export function FixedBillsList() {
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
   const [description, setDescription] = React.useState("")
   const [amount, setAmount] = React.useState("")
-  const [type, setType] = React.useState<"income" | "expense">("expense")
+  const [type, setType] = React.useState<"income" | "expense" | "transfer">("expense")
   const [categoryId, setCategoryId] = React.useState("")
   const [dueDay, setDueDay] = React.useState("1")
   const [recurrence, setRecurrence] = React.useState<RecurrenceType>("monthly")

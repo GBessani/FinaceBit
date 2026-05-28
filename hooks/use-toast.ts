@@ -13,3 +13,5 @@ export function useAppToast() {
     genericError: () => toast.error("Algo deu errado. Tente novamente."),
   }
 }
+
+export const useToast = useAppToast
