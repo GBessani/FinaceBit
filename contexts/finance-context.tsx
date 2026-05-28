@@ -93,14 +93,22 @@ function mapCreditCard(row: Record<string, unknown>): CreditCard {
 }
 
 function mapInvestment(row: Record<string, unknown>): Investment {
+  const quantity = Number(row.quantity)
+  const avgPrice = Number(row.avg_price)
+  const investedAmount = Number(row.invested_amount) || (quantity * avgPrice)
   return {
     id: row.id as string,
     name: row.name as string,
     ticker: row.ticker as string,
     assetType: row.asset_type as Investment["assetType"],
-    quantity: Number(row.quantity),
-    avgPrice: Number(row.avg_price),
+    quantity,
+    avgPrice,
     notes: row.notes as string | undefined,
+    investedAmount,
+    investedAt: (row.invested_at as string) || undefined,
+    rate: row.rate ? Number(row.rate) : undefined,
+    rateIndex: row.rate_index as Investment["rateIndex"] | undefined,
+    maturityDate: row.maturity_date as string | undefined,
   }
 }
 
