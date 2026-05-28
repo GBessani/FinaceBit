@@ -194,10 +194,17 @@ export default function InvestimentosPage() {
 
     variableInvestments.forEach(inv => {
       const cp = prices[inv.ticker]?.price || inv.avgPrice
-      const { netProfit } = calcVariableIR(inv, cp)
-      totalInvested += inv.investedAmount ?? 0
-      totalCurrent += inv.quantity * cp
-      totalNet += (inv.investedAmount ?? 0) + netProfit
+      const currentValue = inv.quantity * cp
+      const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
+      const totalBought = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
+      const totalSold = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
+      const hasHistory = invTxs.length > 0
+      const invested = hasHistory ? totalBought : (inv.investedAmount ?? 0)
+      const profit = hasHistory ? currentValue + totalSold - totalBought : currentValue - invested
+      const irAmount = profit > 0 ? profit * 0.15 : 0
+      totalInvested += invested
+      totalCurrent += currentValue
+      totalNet += currentValue + (hasHistory ? totalSold - totalBought - irAmount : profit - irAmount)
     })
 
     fixedInvestments.forEach(inv => {
@@ -280,8 +287,27 @@ export default function InvestimentosPage() {
           ) : variableInvestments.map(inv => {
             const cp = prices[inv.ticker]?.price || inv.avgPrice
             const change24h = prices[inv.ticker]?.change24h || 0
-            const { profit, irAmount, netProfit, irRate, days } = calcVariableIR(inv, cp)
             const currentValue = inv.quantity * cp
+
+            // Calcula lucro real considerando histórico de compras e vendas
+            const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
+            const totalBought = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
+            const totalSold = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
+            const hasHistory = invTxs.length > 0
+
+            // Se tem histórico: lucro = valor atual + recebido nas vendas - gasto nas compras
+            // Se não tem: usa cálculo simples
+            const profit = hasHistory
+              ? currentValue + totalSold - totalBought
+              : currentValue - (inv.investedAmount ?? 0)
+
+            const { irAmount, netProfit, irRate, days } = hasHistory
+              ? (() => {
+                  const irRate = inv.assetType === "crypto" ? 0.15 : 0.15
+                  const irAmount = profit > 0 ? profit * irRate : 0
+                  return { irAmount, netProfit: profit - irAmount, irRate, days: 0 }
+                })()
+              : calcVariableIR(inv, cp)
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
