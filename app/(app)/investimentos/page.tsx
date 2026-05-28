@@ -9,6 +9,7 @@ import {
   TrendingUp, TrendingDown, Plus, Trash2, Pencil,
   RefreshCw, Bitcoin, BarChart2, LineChart, Loader2,
   Calendar, Percent, Info, ShieldAlert,
+  Clock, ArrowDownCircle, ArrowUpCircle, X,
 } from "lucide-react"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { toast } from "sonner"
@@ -331,7 +332,7 @@ export default function InvestimentosPage() {
 
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setTxModalId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 transition-colors">
-                    <ClockHistory className="h-3.5 w-3.5" /> Movimentações
+                    <Clock className="h-3.5 w-3.5" /> Movimentações
                   </button>
                   <button onClick={() => openEdit(inv)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
                     <Pencil className="h-3.5 w-3.5" />
@@ -422,7 +423,7 @@ export default function InvestimentosPage() {
 
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setTxModalId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 transition-colors">
-                    <ClockHistory className="h-3.5 w-3.5" /> Movimentações
+                    <Clock className="h-3.5 w-3.5" /> Movimentações
                   </button>
                   <button onClick={() => openEdit(inv)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
                     <Pencil className="h-3.5 w-3.5" />

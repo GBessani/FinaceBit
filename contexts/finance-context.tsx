@@ -482,17 +482,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (error) { toast.error("Erro ao salvar movimentação."); return }
     if (row) {
       const newTx = mapInvestmentTransaction(row)
-      setData(prev => ({ ...prev, investmentTransactions: [newTx, ...prev.investmentTransactions] }))
-      // Recalcula quantidade e preço médio do investimento
-      const allTxs = [newTx, ...prev.investmentTransactions.filter(x => x.investmentId === t.investmentId)]
-      const inv = prev.investments.find(i => i.id === t.investmentId)
-      if (inv) {
-        const buys = allTxs.filter(x => x.type === "buy")
-        const totalQty = buys.reduce((s, x) => s + x.quantity, 0) - allTxs.filter(x => x.type === "sell").reduce((s, x) => s + x.quantity, 0)
-        const totalInvested = buys.reduce((s, x) => s + x.total, 0)
-        const avgPrice = totalQty > 0 ? totalInvested / totalQty : 0
-        await supabase.from("investments").update({ quantity: totalQty, avg_price: avgPrice, invested_amount: totalInvested }).eq("id", inv.id)
-      }
+      setData(prev => {
+        const allTxs = [newTx, ...prev.investmentTransactions.filter((x: InvestmentTransaction) => x.investmentId === t.investmentId)]
+        const inv = prev.investments.find((i: Investment) => i.id === t.investmentId)
+        if (inv) {
+          const buys = allTxs.filter((x: InvestmentTransaction) => x.type === "buy")
+          const sells = allTxs.filter((x: InvestmentTransaction) => x.type === "sell")
+          const totalQty = buys.reduce((s: number, x: InvestmentTransaction) => s + x.quantity, 0) - sells.reduce((s: number, x: InvestmentTransaction) => s + x.quantity, 0)
+          const totalInvested = buys.reduce((s: number, x: InvestmentTransaction) => s + x.total, 0)
+          const avgPrice = totalQty > 0 ? totalInvested / totalQty : 0
+          supabase.from("investments").update({ quantity: totalQty, avg_price: avgPrice, invested_amount: totalInvested }).eq("id", inv.id)
+          const updatedInvestments = prev.investments.map((i: Investment) => i.id === inv.id ? { ...i, quantity: totalQty, avgPrice, investedAmount: totalInvested } : i)
+          return { ...prev, investmentTransactions: [newTx, ...prev.investmentTransactions], investments: updatedInvestments }
+        }
+        return { ...prev, investmentTransactions: [newTx, ...prev.investmentTransactions] }
+      })
       toast.success(t.type === "buy" ? "Compra registrada!" : "Venda registrada!")
     }
   }, [user, supabase])
