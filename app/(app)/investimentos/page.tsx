@@ -39,6 +39,7 @@ export default function InvestimentosPage() {
   const [varForm, setVarForm] = useState(emptyVariable)
   const [fixForm, setFixForm] = useState(emptyFixed)
   const [priceInput, setPriceInput] = useState("")
+  const [manualMode, setManualMode] = useState(false)
   const [tickerDebounce, setTickerDebounce] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const variableInvestments = data.investments.filter(i => i.assetType !== "fixed_income")
@@ -107,6 +108,7 @@ export default function InvestimentosPage() {
 
   function onQuantityChange(val: string) {
     setVarForm(p => ({ ...p, quantity: val }))
+    if (manualMode) return
     const qty = parseFloat(val.replace(",", "."))
     const price = prices[varForm.ticker]?.price
     if (qty && price) setPriceInput((qty * price).toFixed(2))
@@ -114,6 +116,7 @@ export default function InvestimentosPage() {
 
   function onPriceInputChange(val: string) {
     setPriceInput(val)
+    if (manualMode) return
     const total = parseFloat(val.replace(",", "."))
     const price = prices[varForm.ticker]?.price
     if (total && price) setVarForm(p => ({ ...p, quantity: (total / price).toFixed(8) }))
@@ -488,6 +491,24 @@ export default function InvestimentosPage() {
                       <option value="crypto">Criptomoeda</option>
                     </select>
                   </div>
+                  {/* Toggle automático/manual */}
+                  <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium">{manualMode ? "Modo Manual" : "Modo Automático"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {manualMode
+                          ? "Quantidade e valor independentes"
+                          : "Quantidade ↔ Valor calculados automaticamente"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setManualMode(m => !m)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${manualMode ? "bg-primary" : "bg-border"}`}
+                    >
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${manualMode ? "translate-x-6" : "translate-x-0.5"}`} />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Quantidade</label>
