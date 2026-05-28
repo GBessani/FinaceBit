@@ -18,7 +18,7 @@ type Tab = "variable" | "fixed"
 const FIXED_INCOME_TYPES = ["CDB", "LCI", "LCA", "Tesouro Direto", "CRI", "CRA", "Debenture", "Poupanca"]
 const RATE_INDEXES: FixedIncomeIndex[] = ["CDI", "SELIC", "IPCA", "prefixado"]
 
-const emptyVariable = { name: "", ticker: "", assetType: "stock" as AssetType, quantity: "", price: "" }
+const emptyVariable = { name: "", ticker: "", assetType: "stock" as AssetType, quantity: "", price: "", investedAt: "" }
 const emptyFixed = {
   name: "", investedAmount: "", investedAt: "", rateIndex: "CDI" as FixedIncomeIndex,
   rate: "100", maturityDate: ""
@@ -112,7 +112,7 @@ export default function InvestimentosPage() {
       quantity: qty,
       avgPrice: investedAmount / qty,
       investedAmount,
-      investedAt: new Date().toISOString().split("T")[0],
+      investedAt: varForm.investedAt || new Date().toISOString().split("T")[0],
     }
     if (editingId) await updateInvestment(payload)
     else await addInvestment(payload)
@@ -155,7 +155,7 @@ export default function InvestimentosPage() {
       })
       setTab("fixed")
     } else {
-      setVarForm({ name: inv.name, ticker: inv.ticker, assetType: inv.assetType, quantity: inv.quantity.toString(), price: "" })
+      setVarForm({ name: inv.name, ticker: inv.ticker, assetType: inv.assetType, quantity: inv.quantity.toString(), price: "", investedAt: inv.investedAt || "" })
       setPriceInput(inv.investedAmount?.toString() || "")
       setTab("variable")
     }
@@ -473,6 +473,17 @@ export default function InvestimentosPage() {
                         placeholder="0,00" type="text"
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> Data de aplicação
+                    </label>
+                    <input
+                      type="date"
+                      value={varForm.investedAt}
+                      onChange={e => setVarForm(p => ({ ...p, investedAt: e.target.value }))}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
                 </>
               ) : (
