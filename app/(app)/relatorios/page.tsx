@@ -2,7 +2,8 @@
 
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getMonthName } from "@/lib/utils"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
+import { Calendar, ChevronDown } from "lucide-react"
 import {
   AreaChart,
   Area,
@@ -19,15 +20,52 @@ import {
 export default function RelatoriosPage() {
   const { data, getCategory, isLoaded } = useFinance()
 
+  // ─── Filtros de período ────────────────────────────────
+  const [preset, setPreset] = useState("12") // "3", "6", "12", "all", "custom"
+  const [customStart, setCustomStart] = useState("")
+  const [customEnd, setCustomEnd] = useState("")
+  const [showCustom, setShowCustom] = useState(false)
+
+  const presets = [
+    { value: "3", label: "Últimos 3 meses" },
+    { value: "6", label: "Últimos 6 meses" },
+    { value: "12", label: "Últimos 12 meses" },
+    { value: "all", label: "Todo o histórico" },
+    { value: "custom", label: "Período personalizado" },
+  ]
+
+  // Calcula datas de início e fim baseado no filtro
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date()
+    const end = now.toISOString().split("T")[0]
+
+    if (preset === "custom" && customStart && customEnd) {
+      return { startDate: customStart, endDate: customEnd }
+    }
+    if (preset === "all") {
+      return { startDate: "2000-01-01", endDate: end }
+    }
+    const months = parseInt(preset)
+    const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+    return { startDate: start.toISOString().split("T")[0], endDate: end }
+  }, [preset, customStart, customEnd])
+
+  // Filtra transações pelo período
+  const filteredTransactions = useMemo(() =>
+    data.transactions.filter(t => t.date >= startDate && t.date <= endDate)
+  , [data.transactions, startDate, endDate])
+
   const yearlyData = useMemo(() => {
     const months: Record<string, { month: string; income: number; expense: number; balance: number }> = {}
-    const now = new Date()
 
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+    // Gera meses dinamicamente baseado no período filtrado
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const current = new Date(start.getFullYear(), start.getMonth(), 1)
+    while (current <= end) {
+      const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`
       months[key] = {
-        month: getMonthName(date.getMonth()).substring(0, 3),
+        month: getMonthName(current.getMonth()).substring(0, 3),
         income: 0,
         expense: 0,
         balance: 0,
@@ -62,21 +100,21 @@ export default function RelatoriosPage() {
       runningBalance += m.income - m.expense
       return { ...m, balance: runningBalance }
     })
-  }, [data.transactions])
+  }, [filteredTransactions, startDate, endDate])
 
   const totalIncome = useMemo(() =>
-    data.transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  , [data.transactions])
+    filteredTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  , [filteredTransactions])
 
   const totalExpenses = useMemo(() =>
-    data.transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-  , [data.transactions])
+    filteredTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  , [filteredTransactions])
 
   const expensesByCategory = useMemo(() => {
     const grouped: Record<string, { name: string; value: number; color: string }> = {}
 
     // Transações manuais
-    data.transactions
+    filteredTransactions
       .filter((t) => t.type === "expense")
       .forEach((t) => {
         const category = getCategory(t.categoryId)
@@ -87,14 +125,14 @@ export default function RelatoriosPage() {
       })
 
     return Object.values(grouped).sort((a, b) => b.value - a.value)
-  }, [data.transactions, getCategory])
+  }, [filteredTransactions, getCategory])
 
   const averageMonthlyExpense = useMemo(() => {
     const monthsWithData = new Set(
-      data.transactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7))
+      filteredTransactions.filter((t) => t.type === "expense").map((t) => t.date.substring(0, 7))
     ).size
     return monthsWithData > 0 ? totalExpenses / monthsWithData : 0
-  }, [data.transactions, totalExpenses])
+  }, [filteredTransactions, totalExpenses])
 
   if (!isLoaded) {
     return (
