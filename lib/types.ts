@@ -83,7 +83,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "12", name: "Contas", icon: "FileText", color: "#64748b", type: "expense" },
 ]
 
-export type AssetType = "crypto" | "stock" | "fund"
+export type AssetType = "crypto" | "stock" | "fund" | "fixed_income"
+export type InvestmentType = AssetType
+export type FixedIncomeIndex = "CDI" | "SELIC" | "IPCA" | "prefixado"
 
 export interface Investment {
   id: string
@@ -93,6 +95,12 @@ export interface Investment {
   quantity: number
   avgPrice: number
   notes?: string
+  // Campos novos
+  investedAmount?: number
+  investedAt?: string
+  rate?: number
+  rateIndex?: FixedIncomeIndex
+  maturityDate?: string
 }
 
 export interface CreditCard {
