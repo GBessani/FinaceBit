@@ -70,29 +70,17 @@ export default function RelatoriosPage() {
         expense: 0,
         balance: 0,
       }
+      current.setMonth(current.getMonth() + 1)
     }
 
-    // Transações manuais
-    data.transactions.forEach((t) => {
+    // Transações manuais (filtradas pelo período)
+    filteredTransactions.forEach((t) => {
       const key = t.date.substring(0, 7)
       if (months[key]) {
         if (t.type === "income") months[key].income += t.amount
-        else months[key].expense += t.amount
+        else if (t.type === "expense") months[key].expense += t.amount
       }
     })
-
-    // Lançamentos futuros concluídos
-    data.scheduledTransactions
-      .filter((t) => t.isCompleted)
-      .forEach((t) => {
-        const key = t.scheduledDate.substring(0, 7)
-        if (months[key]) {
-          if (t.type === "income") months[key].income += t.amount
-          else months[key].expense += t.amount
-        }
-      })
-
-    // Meses que têm pelo menos uma transação ou lançamento concluído
 
 
     let runningBalance = 0
@@ -153,6 +141,53 @@ export default function RelatoriosPage() {
       <div>
         <h1 className="text-2xl font-bold">Relatórios</h1>
         <p className="text-muted-foreground">Análise detalhada das suas finanças</p>
+      </div>
+
+      {/* Filtros de período */}
+      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            Período:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {presets.map(p => (
+              <button
+                key={p.value}
+                onClick={() => { setPreset(p.value); setShowCustom(p.value === "custom") }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  preset === p.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary hover:bg-secondary/80"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {showCustom && (
+          <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">De:</label>
+              <input
+                type="date"
+                value={customStart}
+                onChange={e => setCustomStart(e.target.value)}
+                className="px-3 py-1.5 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">Até:</label>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={e => setCustomEnd(e.target.value)}
+                className="px-3 py-1.5 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
