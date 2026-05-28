@@ -199,10 +199,10 @@ export default function InvestimentosPage() {
       const totalBought = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
       const totalSold = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
       const hasHistory = invTxs.length > 0
-      const invested = hasHistory ? totalBought : (inv.investedAmount ?? 0)
-      const profit = hasHistory ? currentValue + totalSold - totalBought : currentValue - invested
+      const invested = hasHistory ? totalBought - totalSold : (inv.investedAmount ?? 0)
+      const profit = hasHistory ? currentValue + totalSold - totalBought : currentValue - (inv.investedAmount ?? 0)
       const irAmount = profit > 0 ? profit * 0.15 : 0
-      totalInvested += invested
+      totalInvested += Math.max(0, invested)
       totalCurrent += currentValue
       totalNet += currentValue + (hasHistory ? totalSold - totalBought - irAmount : profit - irAmount)
     })
@@ -243,7 +243,7 @@ export default function InvestimentosPage() {
       {/* Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground mb-1">Total Investido</p>
+          <p className="text-sm text-muted-foreground mb-1">Capital em Carteira</p>
           <p className="text-2xl font-bold">{formatCurrency(totals.totalInvested)}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
