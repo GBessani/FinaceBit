@@ -46,6 +46,7 @@ export default function InvestimentosPage() {
   const [fixForm, setFixForm] = useState(emptyFixed)
   const [priceInput, setPriceInput] = useState("")
   const [manualMode, setManualMode] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [tickerDebounce, setTickerDebounce] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const variableInvestments = data.investments.filter(i => i.assetType !== "fixed_income" && i.assetType !== "savings_box")
@@ -134,7 +135,12 @@ export default function InvestimentosPage() {
     const qty = parseFloat(varForm.quantity.replace(",", "."))
     const currentPrice = prices[varForm.ticker]?.price
     const investedAmount = parseFloat(priceInput.replace(",", ".")) || (qty * (currentPrice || 0))
-    if (!varForm.name || !varForm.ticker || !qty) return
+    const errs: Record<string, string> = {}
+    if (!varForm.ticker.trim()) errs.ticker = "Ticker é obrigatório"
+    if (!varForm.name.trim()) errs.name = "Nome é obrigatório"
+    if (!qty || qty <= 0) errs.quantity = "Quantidade deve ser maior que zero"
+    if (!priceInput || parseFloat(priceInput) <= 0) errs.price = "Valor investido deve ser maior que zero"
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     const payload: Investment = {
       id: editingId || "",
@@ -154,9 +160,11 @@ export default function InvestimentosPage() {
   // ─── Save renda fixa ──────────────────────────────
   async function saveFixed() {
     const amount = parseFloat(fixForm.investedAmount.replace(",", "."))
-    if (!fixForm.name || !amount || !fixForm.investedAt) {
-      toast.error("Preencha nome, valor e data de aplicação"); return
-    }
+    const errs: Record<string, string> = {}
+    if (!fixForm.name) errs.name = "Selecione o tipo"
+    if (!fixForm.investedAmount || amount <= 0) errs.investedAmount = "Valor deve ser maior que zero"
+    if (!fixForm.investedAt) errs.investedAt = "Data de aplicação é obrigatória"
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     const payload: Investment = {
       id: editingId || "",
       name: fixForm.name,
@@ -652,6 +660,7 @@ export default function InvestimentosPage() {
                     <input value={varForm.ticker} onChange={e => onTickerChange(e.target.value)}
                       placeholder="Ex: PETR4, bitcoin"
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    {errors.ticker && <p className="text-xs text-red-500 mt-1">{errors.ticker}</p>}
                     {prices[varForm.ticker] && (
                       <p className="text-xs text-emerald-600 mt-1">Cotação: {formatCurrency(prices[varForm.ticker].price)}</p>
                     )}
@@ -691,15 +700,17 @@ export default function InvestimentosPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Quantidade</label>
-                      <input value={varForm.quantity} onChange={e => onQuantityChange(e.target.value)}
+                      <input value={varForm.quantity} onChange={e => { onQuantityChange(e.target.value); setErrors(p => ({ ...p, quantity: "" })) }}
                         placeholder="0,00" type="text"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.quantity ? "border-red-400" : "border-border"}`} />
+                      {errors.quantity && <p className="text-xs text-red-500 mt-1">{errors.quantity}</p>}
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1 block">Valor investido (R$)</label>
-                      <input value={priceInput} onChange={e => onPriceInputChange(e.target.value)}
+                      <input value={priceInput} onChange={e => { onPriceInputChange(e.target.value); setErrors(p => ({ ...p, price: "" })) }}
                         placeholder="0,00" type="text"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.price ? "border-red-400" : "border-border"}`} />
+                      {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
                     </div>
                   </div>
                   <div>

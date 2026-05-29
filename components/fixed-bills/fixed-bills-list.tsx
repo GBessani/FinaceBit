@@ -80,7 +80,13 @@ export function FixedBillsList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !categoryId) return
+    const errs: Record<string, string> = {}
+    if (!description.trim()) errs.description = "Descrição é obrigatória"
+    if (!amount) errs.amount = "Valor é obrigatório"
+    else if (parseFloat(amount) <= 0) errs.amount = "Valor deve ser maior que zero"
+    if (!dueDay) errs.dueDay = "Dia de vencimento é obrigatório"
+    else if (parseInt(dueDay) < 1 || parseInt(dueDay) > 31) errs.dueDay = "Dia deve ser entre 1 e 31"
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     const billData: FixedBill = {
       id: editingBill?.id || "",
