@@ -12,6 +12,7 @@ import {
   Investment,
   CreditCard,
   InvestmentTransaction,
+  Budget,
 } from "@/lib/types"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
@@ -155,6 +156,10 @@ interface FinanceContextType {
   deleteInvestment: (id: string) => Promise<void>
   initialBalance: number
   setInitialBalance: (value: number) => Promise<void>
+  budgets: Budget[]
+  addBudget: (b: Omit<Budget, "id">) => Promise<void>
+  updateBudget: (b: Budget) => Promise<void>
+  deleteBudget: (id: string) => Promise<void>
   investmentTransactions: InvestmentTransaction[]
   addInvestmentTransaction: (t: Omit<InvestmentTransaction, "id">) => Promise<void>
   deleteInvestmentTransaction: (id: string) => Promise<void>
@@ -180,12 +185,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     investments: [],
     creditCards: [],
     investmentTransactions: [],
+    budgets: [],
   })
   const [isLoaded, setIsLoaded] = React.useState(false)
   const [initialBalance, setInitialBalanceState] = React.useState(0)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs] = await Promise.all([
+    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs, budgets] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
@@ -194,6 +200,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       supabase.from("investments").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("credit_cards").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("investment_transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
+      supabase.from("budgets").select("*").eq("user_id", userId),
     ])
 
     setData({
@@ -205,6 +212,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       investments: (invs.data ?? []).map(mapInvestment),
       creditCards: (cards.data ?? []).map(mapCreditCard),
       investmentTransactions: (invTxs.data ?? []).map(mapInvestmentTransaction),
+      budgets: (budgets.data ?? []).map((r: Record<string, unknown>) => ({ id: r.id as string, categoryId: r.category_id as string, amount: Number(r.amount), month: r.month as string })),
     })
 
     // Load initial balance
@@ -467,6 +475,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setInitialBalanceState(value)
   }, [user, supabase])
 
+  const addBudget = React.useCallback(async (b: Omit<Budget, "id">) => {
+    if (!user) return
+    const { data: row } = await supabase.from("budgets").upsert({
+      user_id: user.id, category_id: b.categoryId, amount: b.amount, month: b.month
+    }, { onConflict: "user_id,category_id,month" }).select().single()
+    if (row) setData(prev => {
+      const exists = prev.budgets.find(x => x.id === row.id)
+      const budget = { id: row.id as string, categoryId: row.category_id as string, amount: Number(row.amount), month: row.month as string }
+      return { ...prev, budgets: exists ? prev.budgets.map(x => x.id === row.id ? budget : x) : [...prev.budgets, budget] }
+    })
+  }, [user, supabase])
+
+  const updateBudget = React.useCallback(async (b: Budget) => {
+    const { data: row } = await supabase.from("budgets").update({ amount: b.amount }).eq("id", b.id).select().single()
+    if (row) setData(prev => ({ ...prev, budgets: prev.budgets.map(x => x.id === b.id ? { ...x, amount: Number(row.amount) } : x) }))
+  }, [supabase])
+
+  const deleteBudget = React.useCallback(async (id: string) => {
+    await supabase.from("budgets").delete().eq("id", id)
+    setData(prev => ({ ...prev, budgets: prev.budgets.filter(b => b.id !== id) }))
+  }, [supabase])
+
   const addInvestmentTransaction = React.useCallback(async (t: Omit<InvestmentTransaction, "id">) => {
     if (!user) return
     const { data: row, error } = await supabase.from("investment_transactions").insert({
@@ -553,6 +583,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       getUpcomingBills, getUpcomingScheduled, signOut,
       initialBalance, setInitialBalance,
       creditCards: data.creditCards,
+      budgets: data.budgets ?? [],
+      addBudget, updateBudget, deleteBudget,
       investmentTransactions: data.investmentTransactions ?? [],
       addInvestmentTransaction, deleteInvestmentTransaction,
       addCreditCard, updateCreditCard, deleteCreditCard,

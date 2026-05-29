@@ -1,7 +1,6 @@
 "use client"
 
 import { useFinance } from "@/contexts/finance-context"
-import { CreditCard } from "lucide-react"
 import { formatCurrency, getCurrentMonth } from "@/lib/utils"
 import { AlertTriangle, Bell, X, CheckCircle } from "lucide-react"
 import { useState, useMemo } from "react"
@@ -91,34 +90,6 @@ export function AlertBanner() {
           })
         }
       })
-
-    // Alertas de cartão de crédito
-    data.creditCards?.filter(card => card.isActive).forEach(card => {
-      const today = new Date()
-      const currentDay = today.getDate()
-
-      let daysToClose = card.closingDay - currentDay
-      if (daysToClose < 0) daysToClose += 30
-
-      let daysToDue = card.dueDay - currentDay
-      if (daysToDue < 0) daysToDue += 30
-
-      if (daysToClose <= 3) {
-        result.push({
-          id: `card-closing-${card.id}`,
-          type: "warning",
-          message: `Fatura do ${card.name} fecha ${daysToClose === 0 ? "hoje" : `em ${daysToClose} dias`}! Lembre de lançar.`,
-          link: "/cartoes",
-        })
-      } else if (daysToDue <= 5) {
-        result.push({
-          id: `card-due-${card.id}`,
-          type: "danger",
-          message: `Fatura do ${card.name} vence ${daysToDue === 0 ? "hoje" : `em ${daysToDue} dias`}!`,
-          link: "/cartoes",
-        })
-      }
-    })
 
     return result.filter(a => !dismissed.includes(a.id))
   }, [data.fixedBills, data.scheduledTransactions, data.transactions, dismissed, today, todayStr, addTransaction, updateScheduledTransaction])

@@ -62,6 +62,7 @@ export interface FinancialData {
   investments: Investment[]
   creditCards: CreditCard[]
   investmentTransactions: InvestmentTransaction[]
+  budgets: Budget[]
   transactions: Transaction[]
   categories: Category[]
   goals: Goal[]
@@ -123,4 +124,11 @@ export interface InvestmentTransaction {
   total: number
   date: string
   notes?: string
+}
+
+export interface Budget {
+  id: string
+  categoryId: string
+  amount: number
+  month: string // YYYY-MM ou "recorrente"
 }
