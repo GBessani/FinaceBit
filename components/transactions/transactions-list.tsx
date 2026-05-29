@@ -190,16 +190,28 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
   const [amount, setAmount] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const categories = data.categories.filter((c) => c.type === type)
 
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!description.trim()) errs.description = "Descrição é obrigatória"
+    if (!amount) errs.amount = "Valor é obrigatório"
+    else if (parseFloat(amount) <= 0) errs.amount = "Valor deve ser maior que zero"
+    if (!categoryId) errs.categoryId = "Selecione uma categoria"
+    if (!date) errs.date = "Data é obrigatória"
+    return errs
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !categoryId) return
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     onSubmit({
       id: generateId(),
-      description,
+      description: description.trim(),
       amount: parseFloat(amount),
       type,
       categoryId,
