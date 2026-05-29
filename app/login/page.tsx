@@ -77,7 +77,7 @@ function LoginContent() {
               <span className="text-sm leading-relaxed select-none">
                 Li e concordo com os{" "}
                 <Link
-                  href="/termos"
+                  href="/FinaceBit_Termos_de_Uso.pdf" target="_blank" rel="noreferrer"
                   onClick={e => e.stopPropagation()}
                   className="text-primary hover:underline font-medium"
                 >
@@ -85,7 +85,7 @@ function LoginContent() {
                 </Link>
                 {" "}e a{" "}
                 <Link
-                  href="/privacidade"
+                  href="/FinaceBit_Politica_de_Privacidade.pdf" target="_blank" rel="noreferrer"
                   onClick={e => e.stopPropagation()}
                   className="text-primary hover:underline font-medium"
                 >
