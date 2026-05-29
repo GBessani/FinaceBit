@@ -184,6 +184,7 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
     goal?.deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   )
   const [color, setColor] = useState(goal?.color || GOAL_COLORS[0])
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
