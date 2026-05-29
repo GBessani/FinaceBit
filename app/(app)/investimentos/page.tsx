@@ -484,11 +484,17 @@ export default function InvestimentosPage() {
             </div>
           ) : savingsBoxes.map(inv => {
             const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
+            const invTxsSorted = [...invTxs].sort((a, b) => a.date.localeCompare(b.date))
             const totalDeposited = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
             const totalWithdrawn = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
-            const balance = invTxs.length > 0 ? totalDeposited - totalWithdrawn : (inv.investedAmount ?? 0)
-            // Recalcula rendimento usando o saldo real das movimentações
-            const { netValue, grossYield, netYield } = calcFixedIncomeYield({ ...inv, investedAmount: balance })
+            const { grossYield, netYield, netValue, balance, days: sbDays } = invTxs.length > 0
+              ? calcSavingsBoxYield(invTxs, inv.rate ?? 100, inv.rateIndex ?? "CDI")
+              : (() => { const r = calcFixedIncomeYield(inv); return { ...r, balance: inv.investedAmount ?? 0, days: 0 } })()
+            // Calcula IOF e IR para exibição
+            const iofRate = sbDays > 0 ? (sbDays < 30 ? [96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3,0][Math.min(sbDays-1,29)] / 100 : 0) : 0
+            const iofAmount = grossYield * iofRate
+            const irRate = sbDays <= 180 ? 0.225 : sbDays <= 360 ? 0.20 : sbDays <= 720 ? 0.175 : 0.15
+            const irAmount = (grossYield - iofAmount) > 0 ? (grossYield - iofAmount) * irRate : 0
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
@@ -510,7 +516,7 @@ export default function InvestimentosPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-3 text-sm">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Depositado</p>
                     <p className="font-medium">{formatCurrency(balance)}</p>
@@ -520,9 +526,25 @@ export default function InvestimentosPage() {
                     <p className="font-medium text-emerald-600">+{formatCurrency(grossYield)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Rendimento Líquido</p>
-                    <p className="font-bold text-emerald-600">+{formatCurrency(netYield)}</p>
+                    <p className="text-muted-foreground text-xs flex items-center gap-1">
+                      <ShieldAlert className="h-3 w-3" /> IOF {iofRate > 0 ? `(${(iofRate*100).toFixed(0)}%)` : ""}
+                    </p>
+                    <p className="font-medium text-amber-600 dark:text-amber-400">
+                      {iofAmount > 0 ? `-${formatCurrency(iofAmount)}` : "—"}
+                    </p>
                   </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs flex items-center gap-1">
+                      <ShieldAlert className="h-3 w-3" /> IR ({(irRate*100).toFixed(1)}%)
+                    </p>
+                    <p className="font-medium text-amber-600 dark:text-amber-400">
+                      {irAmount > 0 ? `-${formatCurrency(irAmount)}` : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Rendimento Líquido (após IOF/IR)</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(netYield)}</span>
                 </div>
 
                 <div className="flex gap-2 mt-3">
