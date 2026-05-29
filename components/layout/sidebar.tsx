@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Wallet,
+  PiggyBank,
   RefreshCw,
   CalendarClock,
   LogOut,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/metas", label: "Metas", icon: Target },
   { href: "/categorias", label: "Categorias", icon: Tags },
   { href: "/investimentos", label: "Investimentos", icon: TrendingUp },
+  { href: "/orcamento", label: "Orçamento", icon: PiggyBank },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ]
 
