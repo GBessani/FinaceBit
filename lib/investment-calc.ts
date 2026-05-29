@@ -87,3 +87,104 @@ export function formatDays(days: number): string {
   const months = Math.floor((days % 365) / 30)
   return months > 0 ? `${years}a ${months}m` : `${years} ano${years > 1 ? "s" : ""}`
 }
+// ─── Calcula rendimento da caixinha considerando cada movimentação ──
+export function calcSavingsBoxYield(
+  transactions: { type: "buy" | "sell"; total: number; date: string }[],
+  rate: number,
+  rateIndex: string
+): { grossYield: number; netYield: number; balance: number; netValue: number; days: number } {
+  if (!transactions.length) return { grossYield: 0, netYield: 0, balance: 0, netValue: 0, days: 0 }
+
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
+  const now = new Date()
+
+  let baseRate = CDI_RATE_ANNUAL
+  if (rateIndex === "SELIC") baseRate = SELIC_RATE_ANNUAL
+  if (rateIndex === "IPCA") baseRate = IPCA_RATE_ANNUAL
+  if (rateIndex === "prefixado") baseRate = rate / 100
+
+  const effectiveRate = rateIndex === "prefixado" ? baseRate : (rate / 100) * baseRate
+  const dailyRate = Math.pow(1 + effectiveRate, 1 / 252) - 1
+
+  let totalGrossYield = 0
+  let balance = 0
+
+  sorted.forEach(tx => {
+    const txDate = new Date(tx.date + "T00:00:00")
+    const days = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
+    const amount = tx.type === "buy" ? tx.total : -tx.total
+    if (tx.type === "buy" && days > 0) {
+      totalGrossYield += tx.total * (Math.pow(1 + dailyRate, days) - 1)
+    }
+    balance += amount
+  })
+
+  balance = Math.max(0, balance)
+
+  const firstTx = sorted[0]
+  const totalDays = Math.floor((now.getTime() - new Date(firstTx.date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))
+  const iofRate = getIOFRate(Math.min(totalDays, 30))
+  const iofAmount = totalGrossYield * iofRate
+  const irRate = getIRRate(totalDays, "fixed_income")
+  const irBase = totalGrossYield - iofAmount
+  const irAmount = irBase > 0 ? irBase * irRate : 0
+  const netYield = totalGrossYield - iofAmount - irAmount
+  const netValue = balance + netYield
+
+  return { grossYield: totalGrossYield, netYield, balance, netValue, days: totalDays }
+}
+// ─── Calcula stats da carteira considerando cada movimentação ──────
+export interface PortfolioStats {
+  totalInvested: number   // total gasto nas compras
+  totalSold: number       // total recebido nas vendas
+  quantity: number        // quantidade atual
+  avgPrice: number        // preço médio de compra
+  profit: number          // lucro bruto (valor atual + vendas - compras)
+  irAmount: number        // IR sobre o lucro
+  netProfit: number       // lucro líquido
+  irRate: number
+}
+
+export function calcPortfolioStats(
+  transactions: { type: "buy" | "sell"; quantity: number; price: number; total: number; date: string }[],
+  currentPrice: number,
+  assetType: string
+): PortfolioStats {
+  if (!transactions.length) {
+    return { totalInvested: 0, totalSold: 0, quantity: 0, avgPrice: 0, profit: 0, irAmount: 0, netProfit: 0, irRate: 0 }
+  }
+
+  const buys = transactions.filter(t => t.type === "buy")
+  const sells = transactions.filter(t => t.type === "sell")
+
+  const totalInvested = buys.reduce((s, t) => s + t.total, 0)
+  const totalSold = sells.reduce((s, t) => s + t.total, 0)
+  const totalBuyQty = buys.reduce((s, t) => s + t.quantity, 0)
+  const totalSellQty = sells.reduce((s, t) => s + t.quantity, 0)
+  const quantity = Math.max(0, totalBuyQty - totalSellQty)
+  const avgPrice = totalBuyQty > 0 ? totalInvested / totalBuyQty : 0
+
+  const currentValue = quantity * currentPrice
+  const profit = currentValue + totalSold - totalInvested
+
+  // IR: usa data da primeira compra para calcular prazo
+  const firstBuy = buys.sort((a, b) => a.date.localeCompare(b.date))[0]
+  const days = firstBuy
+    ? Math.floor((new Date().getTime() - new Date(firstBuy.date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+
+  const irRate = getIRRate(days, assetType)
+  const irAmount = profit > 0 ? profit * irRate : 0
+  const netProfit = profit - irAmount
+
+  return { totalInvested, totalSold, quantity, avgPrice, profit, irAmount, netProfit, irRate }
+}
+
+// ─── Calcula rendimento da renda fixa por movimentação ─────────────
+export function calcFixedIncomeByTxs(
+  transactions: { type: "buy" | "sell"; total: number; date: string }[],
+  rate: number,
+  rateIndex: string
+) {
+  return calcSavingsBoxYield(transactions, rate, rateIndex)
+}

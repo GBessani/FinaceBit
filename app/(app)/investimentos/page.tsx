@@ -3,7 +3,7 @@
 import { useFinance } from "@/contexts/finance-context"
 import { Investment, AssetType, FixedIncomeIndex } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
-import { calcFixedIncomeYield, calcVariableIR, formatDays, CDI_RATE_ANNUAL, SELIC_RATE_ANNUAL, IPCA_RATE_ANNUAL } from "@/lib/investment-calc"
+import { calcFixedIncomeYield, calcVariableIR, calcSavingsBoxYield, calcPortfolioStats, formatDays, CDI_RATE_ANNUAL, SELIC_RATE_ANNUAL, IPCA_RATE_ANNUAL } from "@/lib/investment-calc"
 import { useState, useEffect, useCallback, useMemo } from "react"
 import {
   TrendingUp, TrendingDown, Plus, Trash2, Pencil,
@@ -295,27 +295,19 @@ export default function InvestimentosPage() {
           ) : variableInvestments.map(inv => {
             const cp = prices[inv.ticker]?.price || inv.avgPrice
             const change24h = prices[inv.ticker]?.change24h || 0
-            const currentValue = inv.quantity * cp
-
-            // Calcula lucro real considerando histórico de compras e vendas
             const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
-            const totalBought = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
-            const totalSold = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
-            const hasHistory = invTxs.length > 0
 
-            // Se tem histórico: lucro = valor atual + recebido nas vendas - gasto nas compras
-            // Se não tem: usa cálculo simples
-            const profit = hasHistory
-              ? currentValue + totalSold - totalBought
-              : currentValue - (inv.investedAmount ?? 0)
+            // Usa cálculo por movimentação se tiver histórico
+            const stats = invTxs.length > 0
+              ? calcPortfolioStats(invTxs, cp, inv.assetType)
+              : null
 
-            const { irAmount, netProfit, irRate, days } = hasHistory
-              ? (() => {
-                  const irRate = inv.assetType === "crypto" ? 0.15 : 0.15
-                  const irAmount = profit > 0 ? profit * irRate : 0
-                  return { irAmount, netProfit: profit - irAmount, irRate, days: 0 }
-                })()
-              : calcVariableIR(inv, cp)
+            const currentValue = stats ? stats.quantity * cp : inv.quantity * cp
+            const profit = stats ? stats.profit : currentValue - (inv.investedAmount ?? 0)
+            const irAmount = stats ? stats.irAmount : (profit > 0 ? profit * 0.15 : 0)
+            const netProfit = stats ? stats.netProfit : profit - irAmount
+            const irRate = stats ? stats.irRate : 0.15
+            const days = 0
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
@@ -404,7 +396,13 @@ export default function InvestimentosPage() {
               <p className="text-sm text-muted-foreground">Adicione CDBs, LCIs, Tesouro Direto e outros</p>
             </div>
           ) : fixedInvestments.map(inv => {
-            const { grossYield, netYield, currentValue, netValue, iofAmount, irAmount, days, irRate, iofRate } = calcFixedIncomeYield(inv)
+            const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
+            const { grossYield, netYield, currentValue, netValue, iofAmount, irAmount, days, irRate, iofRate } = invTxs.length > 0
+              ? (() => {
+                  const r = calcSavingsBoxYield(invTxs, inv.rate ?? 100, inv.rateIndex ?? "CDI")
+                  return { ...r, currentValue: r.netValue, iofAmount: 0, irAmount: r.grossYield - r.netYield, iofRate: 0, irRate: 0.15 }
+                })()
+              : calcFixedIncomeYield(inv)
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
