@@ -76,21 +76,9 @@ function LoginContent() {
               </div>
               <span className="text-sm leading-relaxed select-none">
                 Li e concordo com os{" "}
-                <Link
-                  href="/FinaceBit_Termos_de_Uso.pdf" target="_blank" rel="noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Termos de Uso
-                </Link>
+                <a href="/FinaceBit_Termos_de_Uso.pdf" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline font-medium">Termos de Uso</a>
                 {" "}e a{" "}
-                <Link
-                  href="/FinaceBit_Politica_de_Privacidade.pdf" target="_blank" rel="noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Política de Privacidade
-                </Link>
+                <a href="/FinaceBit_Politica_de_Privacidade.pdf" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline font-medium">Política de Privacidade</a>
                 , incluindo o tratamento dos meus dados conforme a LGPD.
               </span>
             </label>
