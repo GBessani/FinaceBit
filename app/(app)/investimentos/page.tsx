@@ -485,11 +485,12 @@ export default function InvestimentosPage() {
               <p className="text-sm text-muted-foreground">Adicione sua caixinha ou reserva de emergência</p>
             </div>
           ) : savingsBoxes.map(inv => {
-            const { netValue, grossYield, netYield } = calcFixedIncomeYield(inv)
             const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
             const totalDeposited = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
             const totalWithdrawn = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
             const balance = invTxs.length > 0 ? totalDeposited - totalWithdrawn : (inv.investedAmount ?? 0)
+            // Recalcula rendimento usando o saldo real das movimentações
+            const { netValue, grossYield, netYield } = calcFixedIncomeYield({ ...inv, investedAmount: balance })
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
