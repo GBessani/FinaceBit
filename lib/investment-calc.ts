@@ -97,6 +97,7 @@ export function calcSavingsBoxYield(
 
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
   const now = new Date()
+  now.setHours(0, 0, 0, 0)
 
   let baseRate = CDI_RATE_ANNUAL
   if (rateIndex === "SELIC") baseRate = SELIC_RATE_ANNUAL
@@ -106,21 +107,32 @@ export function calcSavingsBoxYield(
   const effectiveRate = rateIndex === "prefixado" ? baseRate : (rate / 100) * baseRate
   const dailyRate = Math.pow(1 + effectiveRate, 1 / 252) - 1
 
+  // Simula saldo dia a dia entre movimentações
+  // Para cada período entre movimentações, calcula rendimento sobre o saldo do período
   let totalGrossYield = 0
-  let balance = 0
+  let currentBalance = 0
 
-  sorted.forEach(tx => {
+  for (let i = 0; i < sorted.length; i++) {
+    const tx = sorted[i]
     const txDate = new Date(tx.date + "T00:00:00")
-    const days = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
-    const amount = tx.type === "buy" ? tx.total : -tx.total
-    if (tx.type === "buy" && days > 0) {
-      totalGrossYield += tx.total * (Math.pow(1 + dailyRate, days) - 1)
+
+    // Rendimento do saldo atual até esta movimentação (ou até hoje se for a última)
+    const nextDate = i + 1 < sorted.length
+      ? new Date(sorted[i + 1].date + "T00:00:00")
+      : now
+    const days = Math.floor((nextDate.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    // Aplica movimentação
+    currentBalance += tx.type === "buy" ? tx.total : -tx.total
+    currentBalance = Math.max(0, currentBalance)
+
+    // Rendimento do novo saldo pelo período até próxima movimentação
+    if (currentBalance > 0 && days > 0) {
+      totalGrossYield += currentBalance * (Math.pow(1 + dailyRate, days) - 1)
     }
-    balance += amount
-  })
+  }
 
-  balance = Math.max(0, balance)
-
+  const balance = currentBalance
   const firstTx = sorted[0]
   const totalDays = Math.floor((now.getTime() - new Date(firstTx.date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))
   const iofRate = getIOFRate(Math.min(totalDays, 30))
