@@ -12,6 +12,7 @@ export function CategoriesList() {
   const { data, addCategory, deleteCategory, isLoaded } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense")
 
   const categories = data.categories.filter((c) => c.type === activeTab)

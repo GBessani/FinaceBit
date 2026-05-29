@@ -40,6 +40,7 @@ export function ScheduledList() {
     getCategory,
   } = useFinance()
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [deleteId, setDeleteId] = React.useState<string | null>(null)
   const [editingTransaction, setEditingTransaction] = React.useState<ScheduledTransaction | null>(null)
   const [description, setDescription] = React.useState("")

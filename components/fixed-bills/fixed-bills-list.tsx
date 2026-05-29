@@ -39,6 +39,7 @@ export function FixedBillsList() {
   const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory, addTransaction } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
   const [description, setDescription] = React.useState("")
   const [amount, setAmount] = React.useState("")

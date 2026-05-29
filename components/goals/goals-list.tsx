@@ -187,7 +187,11 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !targetAmount) return
+    const errs: Record<string, string> = {}
+    if (!name.trim()) errs.name = "Nome é obrigatório"
+    if (!targetAmount) errs.targetAmount = "Valor alvo é obrigatório"
+    else if (parseFloat(targetAmount) <= 0) errs.targetAmount = "Valor deve ser maior que zero"
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     onSubmit({
       id: goal?.id || generateId(),
