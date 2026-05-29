@@ -54,34 +54,34 @@ function LoginContent() {
           )}
 
           {/* Aceite dos termos */}
-          <div
-            className={`mb-5 p-3 rounded-xl border transition-colors cursor-pointer ${
+          <div className={`mb-5 p-3 rounded-xl border transition-colors ${
               accepted
                 ? "bg-primary/5 border-primary/30"
                 : showError
                 ? "bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-700"
                 : "bg-secondary/50 border-border"
-            }`}
-            onClick={() => { setAccepted(!accepted); setShowError(false) }}
-          >
-            <label className="flex items-start gap-3 cursor-pointer">
-              <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 shrink-0 transition-colors ${
-                accepted ? "bg-primary border-primary" : "border-muted-foreground"
-              }`}>
+            }`}>
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => { setAccepted(!accepted); setShowError(false) }}
+                className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 shrink-0 transition-colors ${
+                  accepted ? "bg-primary border-primary" : "border-muted-foreground"
+                }`}>
                 {accepted && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
-              </div>
-              <span className="text-sm leading-relaxed select-none">
+              </button>
+              <span className="text-sm leading-relaxed">
                 Li e concordo com os{" "}
-                <a href="/FinaceBit_Termos_de_Uso.pdf" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline font-medium">Termos de Uso</a>
+                <a href="/FinaceBit_Termos_de_Uso.pdf" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">Termos de Uso</a>
                 {" "}e a{" "}
-                <a href="/FinaceBit_Politica_de_Privacidade.pdf" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline font-medium">Política de Privacidade</a>
+                <a href="/FinaceBit_Politica_de_Privacidade.pdf" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">Política de Privacidade</a>
                 , incluindo o tratamento dos meus dados conforme a LGPD.
               </span>
-            </label>
+            </div>
           </div>
 
           {showError && !accepted && (
