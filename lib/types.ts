@@ -84,7 +84,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "12", name: "Contas", icon: "FileText", color: "#64748b", type: "expense" },
 ]
 
-export type AssetType = "crypto" | "stock" | "fund" | "fixed_income"
+export type AssetType = "crypto" | "stock" | "fund" | "fixed_income" | "savings_box"
 export type InvestmentType = AssetType
 export type FixedIncomeIndex = "CDI" | "SELIC" | "IPCA" | "prefixado"
 

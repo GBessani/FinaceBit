@@ -9,12 +9,18 @@ import {
   TrendingUp, TrendingDown, Plus, Trash2, Pencil,
   RefreshCw, Bitcoin, BarChart2, LineChart, Loader2,
   Calendar, Percent, Info, ShieldAlert,
-  Clock, ArrowDownCircle, ArrowUpCircle, X,
+  Clock, ArrowDownCircle, ArrowUpCircle, X, Wallet2, PiggyBank,
 } from "lucide-react"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { toast } from "sonner"
 
-type Tab = "variable" | "fixed"
+type Tab = "variable" | "fixed" | "savings"
+
+const SAVINGS_BOX_RATES = [
+  { label: "100% CDI", value: 100, index: "CDI" as const },
+  { label: "110% CDI", value: 110, index: "CDI" as const },
+  { label: "Poupança (~6.17% a.a.)", value: 6.17, index: "prefixado" as const },
+]
 
 const FIXED_INCOME_TYPES = ["CDB", "LCI", "LCA", "Tesouro Direto", "CRI", "CRA", "Debenture", "Poupanca"]
 const RATE_INDEXES: FixedIncomeIndex[] = ["CDI", "SELIC", "IPCA", "prefixado"]
@@ -42,8 +48,9 @@ export default function InvestimentosPage() {
   const [manualMode, setManualMode] = useState(false)
   const [tickerDebounce, setTickerDebounce] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  const variableInvestments = data.investments.filter(i => i.assetType !== "fixed_income")
+  const variableInvestments = data.investments.filter(i => i.assetType !== "fixed_income" && i.assetType !== "savings_box")
   const fixedInvestments = data.investments.filter(i => i.assetType === "fixed_income")
+  const savingsBoxes = data.investments.filter(i => i.assetType === "savings_box")
 
   // ─── Busca preços ─────────────────────────────────
   const fetchPrices = useCallback(async () => {
@@ -154,7 +161,7 @@ export default function InvestimentosPage() {
       id: editingId || "",
       name: fixForm.name,
       ticker: fixForm.name.toUpperCase().replace(/\s/g, "_"),
-      assetType: "fixed_income" as AssetType,
+      assetType: (tab === "savings" ? "savings_box" : "fixed_income") as AssetType,
       quantity: 1,
       avgPrice: amount,
       investedAmount: amount,
@@ -265,6 +272,7 @@ export default function InvestimentosPage() {
         {[
           { key: "variable", label: "Renda Variável", icon: TrendingUp },
           { key: "fixed", label: "Renda Fixa", icon: BarChart2 },
+          { key: "savings", label: "Caixinha", icon: Wallet2 },
         ].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key as Tab)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
@@ -467,6 +475,77 @@ export default function InvestimentosPage() {
         </div>
       )}
 
+      {/* ── Caixinha ── */}
+      {tab === "savings" && (
+        <div className="space-y-3">
+          {savingsBoxes.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="font-medium">Nenhuma caixinha cadastrada</p>
+              <p className="text-sm text-muted-foreground">Adicione sua caixinha ou reserva de emergência</p>
+            </div>
+          ) : savingsBoxes.map(inv => {
+            const { netValue, grossYield, netYield } = calcFixedIncomeYield(inv)
+            const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
+            const totalDeposited = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
+            const totalWithdrawn = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
+            const balance = invTxs.length > 0 ? totalDeposited - totalWithdrawn : (inv.investedAmount ?? 0)
+            return (
+              <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                      <PiggyBank className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{inv.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {inv.rateIndex === "prefixado" ? `${inv.rate}% a.a.` : `${inv.rate}% do ${inv.rateIndex}`}
+                        {inv.investedAt && ` • Desde ${new Date(inv.investedAt + "T00:00:00").toLocaleDateString("pt-BR")}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netValue)}</p>
+                    <p className="text-xs text-muted-foreground">Saldo líquido</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Depositado</p>
+                    <p className="font-medium">{formatCurrency(balance)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Rendimento Bruto</p>
+                    <p className="font-medium text-emerald-600">+{formatCurrency(grossYield)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Rendimento Líquido</p>
+                    <p className="font-bold text-emerald-600">+{formatCurrency(netYield)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => setTxModalId(inv.id)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs hover:bg-emerald-100 transition-colors">
+                    <ArrowDownCircle className="h-3.5 w-3.5" /> Depositar / Retirar
+                  </button>
+                  <button onClick={() => openEdit(inv)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-secondary transition-colors">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setDeleteId(inv.id)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-xs hover:bg-red-50 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Modal formulário */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
@@ -479,6 +558,7 @@ export default function InvestimentosPage() {
                   {[
                     { key: "variable", label: "Renda Variável" },
                     { key: "fixed", label: "Renda Fixa" },
+                    { key: "savings", label: "Caixinha" },
                   ].map(({ key, label }) => (
                     <button key={key} onClick={() => setTab(key as Tab)}
                       className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -492,7 +572,46 @@ export default function InvestimentosPage() {
             </div>
 
             <div className="p-5 space-y-4">
-              {tab === "variable" ? (
+              {tab === "savings" ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Nome da caixinha</label>
+                    <input value={fixForm.name} onChange={e => setFixForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Ex: Reserva de emergência, Viagem..."
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Saldo inicial (R$)</label>
+                      <input value={fixForm.investedAmount} onChange={e => setFixForm(p => ({ ...p, investedAmount: e.target.value }))}
+                        placeholder="0,00" type="text"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Data de início</label>
+                      <input value={fixForm.investedAt} onChange={e => setFixForm(p => ({ ...p, investedAt: e.target.value }))}
+                        type="date"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Rendimento</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {SAVINGS_BOX_RATES.map(r => (
+                        <button key={r.label}
+                          onClick={() => setFixForm(p => ({ ...p, rate: r.value.toString(), rateIndex: r.index }))}
+                          className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                            fixForm.rate === r.value.toString()
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border hover:bg-secondary"
+                          }`}>
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : tab === "variable" ? (
                 <>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Ticker / ID</label>
@@ -670,47 +789,77 @@ export default function InvestimentosPage() {
               {/* Nova movimentação */}
               <div className="p-5 border-b border-border space-y-3">
                 <p className="text-sm font-semibold">Nova movimentação</p>
-                <div className="flex gap-2">
-                  {[{ v: "buy", label: "Compra", icon: ArrowDownCircle }, { v: "sell", label: "Venda", icon: ArrowUpCircle }].map(({ v, label, icon: Icon }) => (
-                    <button key={v} onClick={() => setTxForm(p => ({ ...p, type: v as "buy" | "sell" }))}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        txForm.type === v
-                          ? v === "buy" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
-                          : "bg-secondary"
-                      }`}>
-                      <Icon className="h-4 w-4" /> {label}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Quantidade</label>
-                    <input value={txForm.quantity} onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
-                      placeholder="0.00" type="text"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Preço unit. (R$)</label>
-                    <input value={txForm.price} onChange={e => setTxForm(p => ({ ...p, price: e.target.value }))}
-                      placeholder="0.00" type="text"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Data</label>
-                    <input value={txForm.date} onChange={e => setTxForm(p => ({ ...p, date: e.target.value }))}
-                      type="date"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                </div>
-                {txForm.quantity && txForm.price && (
-                  <p className="text-xs text-muted-foreground">
-                    Total: <strong>{formatCurrency(parseFloat(txForm.quantity.replace(",",".") || "0") * parseFloat(txForm.price.replace(",",".") || "0"))}</strong>
-                  </p>
-                )}
-                <button onClick={saveTx}
-                  className={`w-full py-2 rounded-lg text-sm font-medium text-white transition-colors ${txForm.type === "buy" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
-                  Registrar {txForm.type === "buy" ? "Compra" : "Venda"}
-                </button>
+                {(() => {
+                  const inv = data.investments.find(i => i.id === txModalId)
+                  const isSavings = inv?.assetType === "savings_box"
+                  const buyLabel = isSavings ? "Depositar" : "Compra"
+                  const sellLabel = isSavings ? "Retirar" : "Venda"
+                  const BuyIcon = ArrowDownCircle
+                  const SellIcon = ArrowUpCircle
+                  return (
+                    <>
+                      <div className="flex gap-2">
+                        {[{ v: "buy" as const, label: buyLabel, Icon: BuyIcon }, { v: "sell" as const, label: sellLabel, Icon: SellIcon }].map(({ v, label, Icon }) => (
+                          <button key={v} onClick={() => setTxForm(p => ({ ...p, type: v }))}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              txForm.type === v
+                                ? v === "buy" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
+                                : "bg-secondary"
+                            }`}>
+                            <Icon className="h-4 w-4" /> {label}
+                          </button>
+                        ))}
+                      </div>
+                      {isSavings ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="col-span-1">
+                            <label className="text-xs text-muted-foreground mb-1 block">Valor (R$)</label>
+                            <input value={txForm.price}
+                              onChange={e => setTxForm(p => ({ ...p, price: e.target.value, quantity: "1" }))}
+                              placeholder="0,00" type="text"
+                              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Data</label>
+                            <input value={txForm.date} onChange={e => setTxForm(p => ({ ...p, date: e.target.value }))}
+                              type="date"
+                              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Quantidade</label>
+                            <input value={txForm.quantity} onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
+                              placeholder="0.00" type="text"
+                              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Preço unit. (R$)</label>
+                            <input value={txForm.price} onChange={e => setTxForm(p => ({ ...p, price: e.target.value }))}
+                              placeholder="0.00" type="text"
+                              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Data</label>
+                            <input value={txForm.date} onChange={e => setTxForm(p => ({ ...p, date: e.target.value }))}
+                              type="date"
+                              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                        </div>
+                      )}
+                      {txForm.quantity && txForm.price && !isSavings && (
+                        <p className="text-xs text-muted-foreground">
+                          Total: <strong>{formatCurrency(parseFloat(txForm.quantity.replace(",", ".") || "0") * parseFloat(txForm.price.replace(",", ".") || "0"))}</strong>
+                        </p>
+                      )}
+                      <button onClick={saveTx}
+                        className={`w-full py-2 rounded-lg text-sm font-medium text-white transition-colors ${txForm.type === "buy" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
+                        {txForm.type === "buy" ? buyLabel : sellLabel}
+                      </button>
+                    </>
+                  )
+                })()}
               </div>
 
               {/* Histórico */}
