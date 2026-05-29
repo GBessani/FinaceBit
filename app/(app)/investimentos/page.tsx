@@ -487,14 +487,9 @@ export default function InvestimentosPage() {
             const invTxsSorted = [...invTxs].sort((a, b) => a.date.localeCompare(b.date))
             const totalDeposited = invTxs.filter(t => t.type === "buy").reduce((s, t) => s + t.total, 0)
             const totalWithdrawn = invTxs.filter(t => t.type === "sell").reduce((s, t) => s + t.total, 0)
-            const { grossYield, netYield, netValue, balance, days: sbDays } = invTxs.length > 0
+            const { grossYield, netYield, netValue, balance, iofAmount, irAmount, iofRate, irRate } = invTxs.length > 0
               ? calcSavingsBoxYield(invTxs, inv.rate ?? 100, inv.rateIndex ?? "CDI")
-              : (() => { const r = calcFixedIncomeYield(inv); return { ...r, balance: inv.investedAmount ?? 0, days: 0 } })()
-            // Calcula IOF e IR para exibição
-            const iofRate = sbDays > 0 ? (sbDays < 30 ? [96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3,0][Math.min(sbDays-1,29)] / 100 : 0) : 0
-            const iofAmount = grossYield * iofRate
-            const irRate = sbDays <= 180 ? 0.225 : sbDays <= 360 ? 0.20 : sbDays <= 720 ? 0.175 : 0.15
-            const irAmount = (grossYield - iofAmount) > 0 ? (grossYield - iofAmount) * irRate : 0
+              : (() => { const r = calcFixedIncomeYield(inv); return { ...r, balance: inv.investedAmount ?? 0 } })()
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">

@@ -92,8 +92,8 @@ export function calcSavingsBoxYield(
   transactions: { type: "buy" | "sell"; total: number; date: string }[],
   rate: number,
   rateIndex: string
-): { grossYield: number; netYield: number; balance: number; netValue: number; days: number } {
-  if (!transactions.length) return { grossYield: 0, netYield: 0, balance: 0, netValue: 0, days: 0 }
+): { grossYield: number; netYield: number; balance: number; netValue: number; days: number; iofAmount: number; irAmount: number; iofRate: number; irRate: number } {
+  if (!transactions.length) return { grossYield: 0, netYield: 0, balance: 0, netValue: 0, days: 0, iofAmount: 0, irAmount: 0, iofRate: 0, irRate: 0 }
 
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
   const now = new Date()
@@ -143,7 +143,7 @@ export function calcSavingsBoxYield(
   const netYield = totalGrossYield - iofAmount - irAmount
   const netValue = balance + netYield
 
-  return { grossYield: totalGrossYield, netYield, balance, netValue, days: totalDays }
+  return { grossYield: totalGrossYield, netYield, balance, netValue, days: totalDays, iofAmount, irAmount, iofRate, irRate }
 }
 // ─── Calcula stats da carteira considerando cada movimentação ──────
 export interface PortfolioStats {
