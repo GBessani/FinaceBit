@@ -26,12 +26,38 @@ export function TransactionsList() {
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<TransactionType | "all">("all")
+  const [filterPeriod, setFilterPeriod] = useState("all")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
 
-  const filteredTransactions = data.transactions.filter((t) => {
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === "all" || t.type === filterType
-    return matchesSearch && matchesType
-  })
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
+
+  const filteredTransactions = (() => {
+    let fromDate = ""
+    let toDate = todayStr
+    if (filterPeriod === "7d")  { const d = new Date(); d.setDate(d.getDate()-7);  fromDate = d.toISOString().split("T")[0] }
+    if (filterPeriod === "30d") { const d = new Date(); d.setDate(d.getDate()-30); fromDate = d.toISOString().split("T")[0] }
+    if (filterPeriod === "90d") { const d = new Date(); d.setDate(d.getDate()-90); fromDate = d.toISOString().split("T")[0] }
+    if (filterPeriod === "custom") { fromDate = dateFrom; toDate = dateTo || todayStr }
+    return data.transactions
+      .filter(t => {
+        const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesType = filterType === "all" || t.type === filterType
+        const matchesDate = !fromDate || (t.date >= fromDate && t.date <= toDate)
+        return matchesSearch && matchesType && matchesDate
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+  })()
+
+  const groupedTransactions = (() => {
+    const groups: Record<string, typeof filteredTransactions> = {}
+    filteredTransactions.forEach(t => {
+      if (!groups[t.date]) groups[t.date] = []
+      groups[t.date].push(t)
+    })
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
+  })()
 
   if (!isLoaded) {
     return (
@@ -190,7 +216,7 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
     description: "",
     amount: "",
     categoryId: "",
-    date: new Date().toISOString().split("T")[0],
+    date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(),
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const { type, description, amount, categoryId, date } = form
@@ -225,7 +251,7 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
       categoryId,
       date,
     })
-    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: new Date().toISOString().split("T")[0] })
+    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })() })
     setErrors({})
   }
 
