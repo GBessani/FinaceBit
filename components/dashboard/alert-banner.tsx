@@ -31,7 +31,10 @@ export function AlertBanner() {
       // Verifica se já foi paga este mês
       const currentMonth = getCurrentMonth()
       const alreadyPaid = data.transactions.some(
-        t => t.description === b.description && t.date.startsWith(currentMonth) && t.type === "expense"
+        t => t.type === "expense" &&
+             t.date.startsWith(currentMonth) &&
+             t.categoryId === b.categoryId &&
+             Math.abs(t.amount - b.amount) < 0.01
       )
       if (alreadyPaid) return
 

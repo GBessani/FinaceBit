@@ -185,12 +185,20 @@ interface TransactionFormProps {
 
 function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
   const { data } = useFinance()
-  const [type, setType] = useState<TransactionType>("expense")
-  const [description, setDescription] = useState("")
-  const [amount, setAmount] = useState("")
-  const [categoryId, setCategoryId] = useState("")
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [form, setForm] = useState({
+    type: "expense" as TransactionType,
+    description: "",
+    amount: "",
+    categoryId: "",
+    date: new Date().toISOString().split("T")[0],
+  })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const { type, description, amount, categoryId, date } = form
+  const setType = (v: TransactionType) => setForm(p => ({ ...p, type: v }))
+  const setDescription = (v: string) => setForm(p => ({ ...p, description: v }))
+  const setAmount = (v: string) => setForm(p => ({ ...p, amount: v }))
+  const setCategoryId = (v: string) => setForm(p => ({ ...p, categoryId: v }))
+  const setDate = (v: string) => setForm(p => ({ ...p, date: v }))
 
   const categories = data.categories.filter((c) => c.type === type)
 
@@ -217,6 +225,8 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
       categoryId,
       date,
     })
+    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: new Date().toISOString().split("T")[0] })
+    setErrors({})
   }
 
   return (
