@@ -3,7 +3,7 @@
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getMonthName } from "@/lib/utils"
 import { useMemo, useState } from "react"
-import { Calendar, ChevronDown } from "lucide-react"
+import { Calendar } from "lucide-react"
 import {
   AreaChart,
   Area,
