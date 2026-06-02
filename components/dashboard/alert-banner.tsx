@@ -8,7 +8,7 @@ import { differenceInDays, parseISO, isToday, isBefore } from "date-fns"
 import Link from "next/link"
 
 export function AlertBanner() {
-  const { data, addTransaction, updateScheduledTransaction } = useFinance()
+  const { data, addTransaction, updateScheduledTransaction, getCategory } = useFinance()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [paying, setPaying] = useState<string | null>(null)
   const today = new Date()

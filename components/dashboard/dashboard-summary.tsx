@@ -8,9 +8,15 @@ import {
 } from "lucide-react"
 import { useState, useMemo } from "react"
 
-export function DashboardSummary() {
+interface DashboardSummaryProps {
+  selectedMonth?: string
+  onMonthChange?: (month: string) => void
+}
+
+export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChange }: DashboardSummaryProps = {}) {
   const { getTotalIncome, getTotalExpenses, getBalance, isLoaded, data } = useFinance()
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth())
+  const [internalMonth, setInternalMonth] = useState(getCurrentMonth())
+  const currentMonth = selectedMonthProp ?? internalMonth
 
   const { year, month } = parseMonth(currentMonth)
 
@@ -58,12 +64,14 @@ export function DashboardSummary() {
 
   const prevMonth = () => {
     const d = new Date(year, month - 1, 1)
-    setCurrentMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    setInternalMonth(m); onMonthChange?.(m)
   }
 
   const nextMonth = () => {
     const d = new Date(year, month + 1, 1)
-    setCurrentMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    setInternalMonth(m); onMonthChange?.(m)
   }
 
   if (!isLoaded) {

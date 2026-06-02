@@ -8,7 +8,7 @@ import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { toast } from "sonner"
 
 export default function OrcamentoPage() {
-  const { data, getCategory, addBudget, deleteBudget, getTotalExpenses } = useFinance()
+  const { data, getCategory, addBudget, deleteBudget } = useFinance()
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth())
   const { year, month } = parseMonth(currentMonth)
   const [showForm, setShowForm] = useState(false)

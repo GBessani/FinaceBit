@@ -1,11 +1,17 @@
+"use client"
+
+import { useState } from "react"
 import { DashboardSummary } from "@/components/dashboard/dashboard-summary"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
 import { ExpenseChart, MonthlyChart } from "@/components/dashboard/charts"
 import { UpcomingOverview } from "@/components/dashboard/upcoming-overview"
 import { AlertBanner } from "@/components/dashboard/alert-banner"
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour"
+import { getCurrentMonth } from "@/lib/utils"
 
 export default function DashboardPage() {
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
+
   return (
     <div className="space-y-6">
       <div>
@@ -16,13 +22,15 @@ export default function DashboardPage() {
       <OnboardingTour />
       <AlertBanner />
 
-      <div data-tour="summary"><DashboardSummary /></div>
+      <div data-tour="summary">
+        <DashboardSummary selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+      </div>
 
       <div data-tour="upcoming"><UpcomingOverview /></div>
 
       <div data-tour="charts" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ExpenseChart />
-        <MonthlyChart />
+        <ExpenseChart selectedMonth={selectedMonth} />
+        <MonthlyChart selectedMonth={selectedMonth} />
       </div>
 
       <div data-tour="recent"><RecentTransactions /></div>

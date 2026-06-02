@@ -8,9 +8,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts"
 
-export function ExpenseChart() {
+export function ExpenseChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, getCategory, isLoaded } = useFinance()
-  const currentMonth = getCurrentMonth()
+  const currentMonth = selectedMonth ?? getCurrentMonth()
 
   const expensesByCategory = useMemo(() => {
     const grouped: Record<string, { name: string; value: number; color: string }> = {}
@@ -85,7 +85,7 @@ export function ExpenseChart() {
   )
 }
 
-export function MonthlyChart() {
+export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, isLoaded } = useFinance()
 
   const monthlyData = useMemo(() => {
