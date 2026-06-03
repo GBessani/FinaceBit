@@ -31,9 +31,8 @@ export async function proxy(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login")
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback")
-const isPublicPage = pathname.startsWith("/termos") || 
-                     pathname.startsWith("/privacidade") ||
-                     pathname.startsWith("/convite")
+  const isPublicPage = request.nextUrl.pathname.startsWith("/termos") || request.nextUrl.pathname.startsWith("/privacidade") || request.nextUrl.pathname.startsWith("/convite")
+
   // Não logado e tentando acessar app → redireciona pro login
   if (!user && !isAuthPage && !isAuthCallback && !isPublicPage) {
     const url = request.nextUrl.clone()
