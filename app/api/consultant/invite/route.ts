@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 
@@ -31,10 +32,13 @@ export async function GET(req: Request) {
   const token = searchParams.get("token")
   if (!token) return NextResponse.json({ error: "Token obrigatório" }, { status: 400 })
 
-  // Usa service role para leitura pública do convite
-  const supabase = await createClient()
+  // Usa service role para leitura pública (ignora RLS)
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("consultant_clients")
     .select("id, status, client_email, consultant_id")
     .eq("invite_token", token)
@@ -43,8 +47,8 @@ export async function GET(req: Request) {
   if (error || !data) return NextResponse.json({ error: "Convite inválido ou expirado" }, { status: 404 })
   if (data.status !== "pending") return NextResponse.json({ error: "Este convite já foi utilizado" }, { status: 410 })
 
-  // Busca nome do consultor separadamente
-  const { data: consultorProfile } = await supabase
+  // Busca nome do consultor
+  const { data: consultorProfile } = await admin
     .from("profiles")
     .select("name, email")
     .eq("id", data.consultant_id)
