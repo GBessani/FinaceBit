@@ -56,6 +56,8 @@ export interface ScheduledTransaction {
   notes?: string
   fixedBillId?: string
   installmentNumber?: number
+  creditCardId?: string   // se for compra no cartão
+  totalInstallments?: number // total de parcelas
 }
 
 export interface FinancialData {

@@ -79,6 +79,8 @@ function mapScheduledTransaction(row: Record<string, unknown>): ScheduledTransac
     notes: row.notes as string | undefined,
     fixedBillId: row.fixed_bill_id as string | undefined,
     installmentNumber: row.installment_number as number | undefined,
+    creditCardId: row.credit_card_id as string | undefined,
+    totalInstallments: row.total_installments as number | undefined,
   }
 }
 
