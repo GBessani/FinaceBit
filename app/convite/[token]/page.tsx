@@ -67,7 +67,7 @@ export default function ConvitePage() {
     </div>
   )
 
-  const consultantName = invite.profiles?.name || invite.profiles?.email || "Um consultor financeiro"
+  const consultantName = invite.consultorName || "Um consultor financeiro"
 
   if (done === "accepted") return (
     <div className="min-h-screen flex items-center justify-center p-4">

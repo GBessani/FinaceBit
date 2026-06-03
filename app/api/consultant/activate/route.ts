@@ -14,7 +14,10 @@ export async function POST(req: Request) {
 
   const { error } = await supabase
     .from("profiles")
-    .upsert({ id: user.id, role: "consultant", email: user.email, name: user.user_metadata?.full_name })
+    .upsert(
+      { id: user.id, role: "consultant", email: user.email, name: user.user_metadata?.full_name || user.email },
+      { onConflict: "id" }
+    )
 
   if (error) return NextResponse.json({ error: "Erro ao ativar" }, { status: 500 })
   return NextResponse.json({ success: true })

@@ -29,14 +29,30 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const token = searchParams.get("token")
+  if (!token) return NextResponse.json({ error: "Token obrigatório" }, { status: 400 })
+
+  // Usa service role para leitura pública do convite
   const supabase = await createClient()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("consultant_clients")
-    .select("*, profiles!consultant_id(name, email)")
+    .select("id, status, client_email, consultant_id")
     .eq("invite_token", token)
     .single()
 
-  if (!data) return NextResponse.json({ error: "Convite inválido" }, { status: 404 })
-  return NextResponse.json(data)
+  if (error || !data) return NextResponse.json({ error: "Convite inválido ou expirado" }, { status: 404 })
+  if (data.status !== "pending") return NextResponse.json({ error: "Este convite já foi utilizado" }, { status: 410 })
+
+  // Busca nome do consultor separadamente
+  const { data: consultorProfile } = await supabase
+    .from("profiles")
+    .select("name, email")
+    .eq("id", data.consultant_id)
+    .single()
+
+  return NextResponse.json({
+    ...data,
+    consultorName: consultorProfile?.name || consultorProfile?.email || "Consultor",
+    consultorEmail: consultorProfile?.email || "",
+  })
 }
