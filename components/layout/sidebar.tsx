@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useConsultant } from "@/contexts/consultant-context"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   X,
   Wallet,
   PiggyBank,
+  Users,
   RefreshCw,
   CalendarClock,
   LogOut,
@@ -32,6 +34,7 @@ const navItems = [
   { href: "/categorias", label: "Categorias", icon: Tags },
   { href: "/investimentos", label: "Investimentos", icon: TrendingUp },
   { href: "/orcamento", label: "Orçamento", icon: PiggyBank },
+  { href: "/clientes", label: "Meus Clientes", icon: Users, consultantOnly: true as const },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ]
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useConsultant } from "@/contexts/consultant-context"
 import { useFinance } from "@/contexts/finance-context"
 import { useRouter } from "next/navigation"
 import {
@@ -19,6 +20,9 @@ export default function PerfilPage() {
   const [editingBalance, setEditingBalance] = useState(false)
   const [balanceInput, setBalanceInput] = useState("")
   const [customAvatar, setCustomAvatar] = useState<string | null>(null)
+  const [consultantCode, setConsultantCode] = useState("")
+  const [activatingCode, setActivatingCode] = useState(false)
+  const [codeActivated, setCodeActivated] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
@@ -46,6 +50,26 @@ export default function PerfilPage() {
   const totalTransactions = data.transactions.length
   const totalIncome = data.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
   const totalExpenses = data.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+
+  async function activateConsultantCode() {
+    if (!consultantCode) return
+    setActivatingCode(true)
+    try {
+      const res = await fetch("/api/consultant/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: consultantCode }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCodeActivated(true)
+        toast.success("Você agora é um consultor! Recarregue a página.")
+      } else {
+        toast.error(data.error || "Código inválido")
+      }
+    } catch { toast.error("Erro ao ativar código") }
+    setActivatingCode(false)
+  }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
