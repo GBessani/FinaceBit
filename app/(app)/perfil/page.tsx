@@ -356,6 +356,46 @@ export default function PerfilPage() {
         </div>
       </div>
 
+      {/* Consultor vinculado */}
+      {myConsultant && (
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
+          <h2 className="font-semibold">Consultor vinculado</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{myConsultant.name || myConsultant.email}</p>
+              <p className="text-sm text-muted-foreground">{myConsultant.email}</p>
+            </div>
+            <button onClick={revokeConsultant}
+              className="px-3 py-1.5 text-sm text-red-500 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              Revogar acesso
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isConsultant && !codeActivated && (
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
+          <h2 className="font-semibold">Código de consultor</h2>
+          <p className="text-sm text-muted-foreground">Possui um código de acesso de consultor? Insira abaixo para ativar.</p>
+          <div className="flex gap-3">
+            <input value={consultantCode} onChange={e => setConsultantCode(e.target.value)}
+              placeholder="Código de acesso"
+              className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <button onClick={activateConsultantCode} disabled={activatingCode || !consultantCode}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm">
+              {activatingCode ? "Ativando..." : "Ativar"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isConsultant && (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5">
+          <p className="text-emerald-700 dark:text-emerald-400 font-medium">✅ Você é um consultor financeiro</p>
+          <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">Acesse "Meus Clientes" no menu para gerenciar seus clientes.</p>
+        </div>
+      )}
+
       {/* Ações */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-border">
