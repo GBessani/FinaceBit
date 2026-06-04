@@ -10,6 +10,13 @@ const APP_URL = "https://finace-bit.vercel.app"
 const APP_NAME = "FinaceBit"
 const APP_DESCRIPTION = "Gerencie suas finanças pessoais com inteligência. Controle receitas, despesas, investimentos, metas e conte com um assistente de IA para tomar melhores decisões financeiras."
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
