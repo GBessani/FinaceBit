@@ -31,23 +31,24 @@ export default function ConvitePage() {
   async function respond(accept: boolean) {
     setAccepting(true)
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push("/login"); return }
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser) { router.push("/login"); return }
 
-    await supabase.from("consultant_clients")
-      .update({
-        status: accept ? "active" : "rejected",
-        client_id: user.id,
-        accepted_at: accept ? new Date().toISOString() : null,
-      })
-      .eq("invite_token", token)
-
-    // Cria perfil se não existir
-    await supabase.from("profiles").upsert({
-      id: user.id, email: user.email, name: user.user_metadata?.full_name, role: "user"
+    const res = await fetch("/api/consultant/invite", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        accept,
+        userId: currentUser.id,
+        userEmail: currentUser.email,
+        userName: currentUser.user_metadata?.full_name || currentUser.email,
+      }),
     })
 
-    setDone(accept ? "accepted" : "rejected")
+    if (res.ok) {
+      setDone(accept ? "accepted" : "rejected")
+    }
     setAccepting(false)
   }
 
