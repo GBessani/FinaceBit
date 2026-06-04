@@ -340,7 +340,7 @@ export default function InvestimentosPage() {
                 </div>
 
                 {/* Detalhes de lucro e IR */}
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Investido</p>
                     <p className="font-medium">{formatCurrency(inv.investedAmount ?? 0)}</p>
@@ -432,7 +432,7 @@ export default function InvestimentosPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Investido</p>
                     <p className="font-medium">{formatCurrency(inv.investedAmount ?? 0)}</p>
@@ -519,7 +519,7 @@ export default function InvestimentosPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Depositado</p>
                     <p className="font-medium">{formatCurrency(balance)}</p>

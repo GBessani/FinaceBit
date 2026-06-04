@@ -110,7 +110,7 @@ export function Sidebar() {
           {/* User info + Logout */}
           <div className="pt-4 border-t border-sidebar-border space-y-3">
             {user && (
-              <Link href="/perfil" className="flex items-center gap-2 px-1 hover:opacity-80 transition-opacity">
+              <Link href="/perfil" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-1 hover:opacity-80 transition-opacity">
                 {user.user_metadata?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

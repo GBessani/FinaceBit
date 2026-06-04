@@ -74,7 +74,7 @@ export function TransactionsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -86,7 +86,7 @@ export function TransactionsList() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {(["all", "income", "expense"] as const).map((t) => (
             <button key={t} onClick={() => setFilterType(t)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === t ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"}`}>
@@ -97,7 +97,7 @@ export function TransactionsList() {
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"}`}>
             <Filter className="h-3.5 w-3.5" /> Período
           </button>
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 ml-auto shrink-0">
             <button onClick={() => setShowTransfer(true)}
               className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-sm">
               <ArrowLeftRight className="h-4 w-4" />
@@ -111,7 +111,7 @@ export function TransactionsList() {
           </div>
         </div>
         {showFilters && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {[
               { v: "all", l: "Tudo" }, { v: "7d", l: "7 dias" },
               { v: "30d", l: "30 dias" }, { v: "90d", l: "90 dias" },

@@ -270,7 +270,7 @@ export default function PerfilPage() {
         <div className="px-5 py-3 border-b border-border">
           <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Resumo da conta</p>
         </div>
-        <div className="grid grid-cols-3 divide-x divide-border">
+        <div className="grid grid-cols-3 divide-x divide-border text-center">
           <div className="p-4 text-center">
             <p className="text-2xl font-bold">{totalTransactions}</p>
             <p className="text-xs text-muted-foreground mt-1">Transações</p>

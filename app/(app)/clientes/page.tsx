@@ -79,7 +79,7 @@ export default function ClientesPage() {
       {/* Convidar cliente */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
         <h2 className="font-semibold">Convidar novo cliente</h2>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input value={email} onChange={e => setEmail(e.target.value)}

@@ -325,7 +325,7 @@ export function ScheduledList() {
                   placeholder="Ex: Pagamento do seguro, Bônus..."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{isInstallment ? "Valor Total" : "Valor"}</Label>
                   <Input
