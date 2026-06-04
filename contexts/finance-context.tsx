@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useConsultant } from "./consultant-context"
 import { createClient } from "@/lib/supabase/client"
 import {
   FinancialData,
@@ -176,6 +177,8 @@ const FinanceContext = React.createContext<FinanceContextType | undefined>(undef
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const supabase = React.useMemo(() => createClient(), [])
+  const { activeClientId } = useConsultant()
+  const targetUserIdRef = React.useRef<string>("")
 
   const [user, setUser] = React.useState<User | null>(null)
   const [data, setData] = React.useState<FinancialData>({
@@ -244,10 +247,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase, loadData])
 
+  // Recarrega dados quando consultor muda de cliente
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null
+      if (u) {
+        const targetId = activeClientId || u.id
+        targetUserIdRef.current = targetId
+        loadData(targetId)
+      }
+    })
+  }, [activeClientId])
+
   const addTransaction = React.useCallback(async (t: Transaction) => {
     if (!user) return
     const { data: row, error } = await supabase.from("transactions").insert({
-      user_id: user.id, description: t.description, amount: t.amount,
+      user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
     }).select().single()
     if (error) { toast.error("Erro ao salvar transação."); return }
@@ -275,7 +290,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addCategory = React.useCallback(async (c: Category) => {
     if (!user) return
     const { data: row } = await supabase.from("categories").insert({
-      user_id: user.id, name: c.name, icon: c.icon, color: c.color, type: c.type,
+      user_id: targetUserIdRef.current || user!.id, name: c.name, icon: c.icon, color: c.color, type: c.type,
     }).select().single()
     if (row) setData(prev => ({ ...prev, categories: [...prev.categories, mapCategory(row)] }))
   }, [user, supabase])
@@ -288,7 +303,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addGoal = React.useCallback(async (g: Goal) => {
     if (!user) return
     const { data: row, error } = await supabase.from("goals").insert({
-      user_id: user.id, name: g.name, target_amount: g.targetAmount,
+      user_id: targetUserIdRef.current || user!.id, name: g.name, target_amount: g.targetAmount,
       current_amount: g.currentAmount, deadline: g.deadline, color: g.color,
     }).select().single()
     if (error) { toast.error("Erro ao salvar meta."); return }
@@ -316,7 +331,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addFixedBill = React.useCallback(async (b: FixedBill) => {
     if (!user) return
     const { data: row } = await supabase.from("fixed_bills").insert({
-      user_id: user.id, description: b.description, amount: b.amount, type: b.type,
+      user_id: targetUserIdRef.current || user!.id, description: b.description, amount: b.amount, type: b.type,
       category_id: b.categoryId || null, due_day: b.dueDay, recurrence: b.recurrence,
       is_active: b.isActive, notes: b.notes ?? null,
       total_installments: b.totalInstallments ?? null,
@@ -334,7 +349,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           date.setMonth(date.getMonth() + i)
           const dateStr = date.toISOString().split("T")[0]
           installments.push({
-            user_id: user.id,
+            user_id: targetUserIdRef.current || user!.id,
             description: `${b.description} (${i + 1}/${b.totalInstallments})`,
             amount: b.amount,
             type: b.type,
@@ -378,7 +393,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
     if (!user) return
     const { data: row } = await supabase.from("scheduled_transactions").insert({
-      user_id: user.id, description: t.description, amount: t.amount, type: t.type,
+      user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount, type: t.type,
       category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
       is_completed: t.isCompleted, notes: t.notes ?? null,
     }).select().single()
@@ -435,7 +450,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addInvestment = React.useCallback(async (inv: Investment) => {
     if (!user) return
     const { data: row, error } = await supabase.from("investments").insert({
-      user_id: user.id, name: inv.name, ticker: inv.ticker,
+      user_id: targetUserIdRef.current || user!.id, name: inv.name, ticker: inv.ticker,
       asset_type: inv.assetType, quantity: inv.quantity,
       avg_price: inv.avgPrice, notes: inv.notes ?? null,
       invested_amount: inv.investedAmount ?? null,
@@ -480,7 +495,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addBudget = React.useCallback(async (b: Omit<Budget, "id">) => {
     if (!user) return
     const { data: row } = await supabase.from("budgets").upsert({
-      user_id: user.id, category_id: b.categoryId, amount: b.amount, month: b.month
+      user_id: targetUserIdRef.current || user!.id, category_id: b.categoryId, amount: b.amount, month: b.month
     }, { onConflict: "user_id,category_id,month" }).select().single()
     if (row) setData(prev => {
       const exists = prev.budgets.find(x => x.id === row.id)
@@ -502,7 +517,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addInvestmentTransaction = React.useCallback(async (t: Omit<InvestmentTransaction, "id">) => {
     if (!user) return
     const { data: row, error } = await supabase.from("investment_transactions").insert({
-      user_id: user.id,
+      user_id: targetUserIdRef.current || user!.id,
       investment_id: t.investmentId,
       type: t.type,
       quantity: t.quantity,
@@ -543,7 +558,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addCreditCard = React.useCallback(async (card: CreditCard) => {
     if (!user) return
     const { data: row, error } = await supabase.from("credit_cards").insert({
-      user_id: user.id, name: card.name, limit_amount: card.limitAmount,
+      user_id: targetUserIdRef.current || user!.id, name: card.name, limit_amount: card.limitAmount,
       due_day: card.dueDay, closing_day: card.closingDay,
       color: card.color, is_active: card.isActive,
     }).select().single()
