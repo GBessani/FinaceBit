@@ -110,25 +110,23 @@ export default function ClientesPage() {
         <div className="space-y-3">
           <h2 className="font-semibold text-lg">Clientes ativos ({activeClients.length})</h2>
           {activeClients.map(client => (
-            <div key={client.id} className="bg-card border border-border rounded-xl p-4 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div key={client.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-primary font-bold text-sm">{(client.name || client.email)[0].toUpperCase()}</span>
                 </div>
-                <div>
-                  <p className="font-medium">{client.name}</p>
-                  <p className="text-xs text-muted-foreground">{client.email}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{client.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{client.email}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium shrink-0">
                   <CheckCircle className="h-3.5 w-3.5" /> Ativo
                 </span>
-                <button onClick={() => openClient(client.id, client.name)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
-                  Ver sistema <ArrowRight className="h-3.5 w-3.5" />
-                </button>
               </div>
+              <button onClick={() => openClient(client.id, client.name)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+                Ver sistema <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           ))}
         </div>

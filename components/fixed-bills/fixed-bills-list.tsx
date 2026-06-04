@@ -311,77 +311,39 @@ export function FixedBillsList() {
                   const daysUntil = getDaysUntilDue(bill.dueDay)
                   return (
                     <Card key={bill.id} className={!bill.isActive ? "opacity-50" : ""}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-4">
-                          {category && (
-                            <CategoryIcon icon={category.icon} color={category.color} />
-                          )}
-                          <div>
-                            <p className="font-medium">{bill.description}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>Dia {bill.dueDay}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {recurrenceLabels[bill.recurrence]}
-                              </Badge>
-                              {bill.isActive && daysUntil <= 5 && (
-                                <Badge variant="destructive" className="text-xs">
-                                  {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}
-                                </Badge>
-                              )}
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {category && <CategoryIcon icon={category.icon} color={category.color} />}
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{bill.description}</p>
+                              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Dia {bill.dueDay}</span>
+                                <Badge variant="outline" className="text-xs">{recurrenceLabels[bill.recurrence]}</Badge>
+                                {bill.isActive && daysUntil <= 5 && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <p className="font-semibold text-destructive shrink-0">-{formatCurrency(bill.amount)}</p>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <p className="font-semibold text-destructive">
-                            -{formatCurrency(bill.amount)}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => confirmBill(bill)}
-                              title="Confirmar pagamento"
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => confirmBill(bill)}
-                              title={bill.type === "income" ? "Confirmar recebimento" : "Confirmar pagamento"}
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => toggleActive(bill)}
-                              title={bill.isActive ? "Pausar" : "Ativar"}
-                            >
-                              {bill.isActive ? (
-                                <Pause className="h-4 w-4" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenDialog(bill)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteId(bill.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
+                          <Button variant="ghost" size="sm" onClick={() => confirmBill(bill)}
+                            className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />Confirmar
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleActive(bill)} title={bill.isActive ? "Pausar" : "Ativar"}>
+                            {bill.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(bill)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(bill.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>

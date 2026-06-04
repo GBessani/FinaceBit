@@ -222,16 +222,16 @@ export function ScheduledList() {
     const category = getCategory(transaction.categoryId)
     return (
       <Card key={transaction.id} className={transaction.isCompleted ? "opacity-60" : ""}>
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-4">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {category && (
               <CategoryIcon icon={category.icon} color={category.color} />
             )}
-            <div>
-              <p className="font-medium">{transaction.description}</p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>
+            <div className="min-w-0">
+              <p className="font-medium truncate">{transaction.description}</p>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="truncate">
                   {format(parseISO(transaction.scheduledDate), "dd 'de' MMMM, yyyy", { locale: ptBR })}
                 </span>
                 {!transaction.isCompleted && getStatusBadge(transaction.scheduledDate)}
@@ -244,7 +244,7 @@ export function ScheduledList() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 shrink-0">
             <p className={`font-semibold ${transaction.type === "expense" ? "text-destructive" : "text-primary"}`}>
               {transaction.type === "expense" ? "-" : "+"}{formatCurrency(transaction.amount)}
             </p>
