@@ -14,11 +14,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ConsultantProvider user={user}>
       <FinanceProvider>
-        <div className="flex flex-col min-h-screen bg-background">
+        <div className="flex flex-col min-h-screen bg-background overflow-x-hidden">
           <ConsultantBanner />
           <div className="flex flex-1">
             <Sidebar />
-            <main className="flex-1 p-4 lg:p-8 pt-16 lg:pt-8 pb-24 lg:pb-8">
+            <main className="flex-1 min-w-0 p-4 lg:p-8 pt-16 lg:pt-8 pb-24 lg:pb-8 overflow-x-hidden">
               <div className="max-w-6xl mx-auto">{children}</div>
             </main>
           </div>
