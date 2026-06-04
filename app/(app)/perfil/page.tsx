@@ -246,6 +246,15 @@ export default function PerfilPage() {
 
           <div className="flex items-center gap-3 px-5 py-4">
             <div className="p-2 bg-primary/10 rounded-lg">
+              <Mail className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">E-mail</p>
+              <p className="font-medium truncate">{user.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-5 py-4">
+            <div className="p-2 bg-primary/10 rounded-lg">
               <Calendar className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1">
