@@ -175,25 +175,23 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
         </div>
 
         {/* Saldo */}
-        <div className={`border rounded-xl p-5 shadow-sm ${balance >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
+        <div className={`border rounded-xl p-5 shadow-sm ${totalBalance >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">{isFutureMonth ? "Saldo Previsto" : "Saldo"}</span>
-            <div className={`p-2 rounded-lg ${balance >= 0 ? "bg-primary/10" : "bg-red-100 dark:bg-red-900/30"}`}>
-              {balance >= 0 ? (
+            <span className="text-sm text-muted-foreground">Saldo Total</span>
+            <div className={`p-2 rounded-lg ${totalBalance >= 0 ? "bg-primary/10" : "bg-red-100 dark:bg-red-900/30"}`}>
+              {totalBalance >= 0 ? (
                 <Wallet className="h-4 w-4 text-primary" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
               )}
             </div>
           </div>
-          <p className={`text-2xl font-bold ${balance >= 0 ? "text-foreground" : "text-red-600 dark:text-red-400"}`}>
-            {formatCurrency(balance)}
+          <p className={`text-2xl font-bold ${totalBalance >= 0 ? "text-foreground" : "text-red-600 dark:text-red-400"}`}>
+            {formatCurrency(totalBalance)}
           </p>
-          {income > 0 && (
-            <p className="text-xs text-muted-foreground mt-2">
-              {balance >= 0 ? `${((balance / income) * 100).toFixed(0)}% da receita guardada` : "Saldo negativo este mês"}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            {isFutureMonth ? "🔮 " : ""}{balance >= 0 ? "+" : ""}{formatCurrency(balance)} em {getMonthName(month)}
+          </p>
         </div>
       </div>
     </div>
