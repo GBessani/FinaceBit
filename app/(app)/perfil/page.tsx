@@ -148,7 +148,7 @@ export default function PerfilPage() {
   if (!user) return null
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Perfil</h1>
         <p className="text-muted-foreground">Suas informações pessoais</p>
