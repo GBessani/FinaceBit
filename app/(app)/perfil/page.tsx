@@ -194,11 +194,10 @@ export default function PerfilPage() {
             />
           </div>
 
-          <div className="flex-1">
-            <h2 className="text-xl font-bold">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold truncate">
               {user.user_metadata?.full_name ?? "Usuário"}
             </h2>
-            <p className="text-muted-foreground text-sm">{user.email}</p>
             <span className="inline-flex items-center gap-1 mt-2 text-xs px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full font-medium">
               <Shield className="h-3 w-3" />
               Google OAuth
@@ -244,15 +243,7 @@ export default function PerfilPage() {
               <p className="font-medium">{user.user_metadata?.full_name ?? "—"}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-5 py-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Mail className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-muted-foreground">E-mail</p>
-              <p className="font-medium">{user.email}</p>
-            </div>
-          </div>
+
           <div className="flex items-center gap-3 px-5 py-4">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Calendar className="h-4 w-4 text-primary" />
@@ -270,19 +261,19 @@ export default function PerfilPage() {
         <div className="px-5 py-3 border-b border-border">
           <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Resumo da conta</p>
         </div>
-        <div className="grid grid-cols-3 divide-x divide-border text-center">
-          <div className="p-4 text-center">
-            <p className="text-2xl font-bold">{totalTransactions}</p>
+        <div className="grid grid-cols-3 divide-x divide-border">
+          <div className="p-3 text-center">
+            <p className="text-xl font-bold">{totalTransactions}</p>
             <p className="text-xs text-muted-foreground mt-1">Transações</p>
           </div>
-          <div className="p-4 text-center">
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="p-3 text-center">
+            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 truncate px-1">
               {formatCurrency(totalIncome)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Receitas</p>
           </div>
-          <div className="p-4 text-center">
-            <p className="text-lg font-bold text-red-600 dark:text-red-400">
+          <div className="p-3 text-center">
+            <p className="text-sm font-bold text-red-600 dark:text-red-400 truncate px-1">
               {formatCurrency(totalExpenses)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Despesas</p>
