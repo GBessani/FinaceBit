@@ -14,7 +14,7 @@ interface DashboardSummaryProps {
 }
 
 export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChange }: DashboardSummaryProps = {}) {
-  const { getTotalIncome, getTotalExpenses, getBalance, isLoaded, data } = useFinance()
+  const { getTotalIncome, getTotalExpenses, getBalance, isLoaded, data, initialBalance } = useFinance()
   const [internalMonth, setInternalMonth] = useState(getCurrentMonth())
   const currentMonth = selectedMonthProp ?? internalMonth
 
@@ -46,6 +46,13 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
   const income = useMemo(() => forecastIncome ?? getTotalIncome(currentMonth), [forecastIncome, getTotalIncome, currentMonth])
   const expenses = useMemo(() => forecastExpenses ?? getTotalExpenses(currentMonth), [forecastExpenses, getTotalExpenses, currentMonth])
   const balance = useMemo(() => income - expenses, [income, expenses])
+
+  // Saldo total acumulado desde o início (todas as transações)
+  const totalBalance = useMemo(() => {
+    const allIncome = data.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
+    const allExpenses = data.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+    return (initialBalance ?? 0) + allIncome - allExpenses
+  }, [data.transactions, initialBalance])
 
   // Mês anterior para comparativo
   const prevMonthKey = useMemo(() => {
