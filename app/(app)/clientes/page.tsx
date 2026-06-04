@@ -25,6 +25,13 @@ export default function ClientesPage() {
     )
   }
 
+  async function cancelInvite(token: string) {
+    const supabase = (await import("@/lib/supabase/client")).createClient()
+    await supabase.from("consultant_clients").delete().eq("invite_token", token)
+    toast.success("Convite cancelado!")
+    await refreshClients()
+  }
+
   async function sendInvite() {
     if (!email) return
     setInviting(true)
@@ -142,9 +149,15 @@ export default function ClientesPage() {
                   <p className="text-xs text-muted-foreground">Aguardando aceite</p>
                 </div>
               </div>
-              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> Pendente
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" /> Pendente
+                </span>
+                <button onClick={() => client.inviteToken && cancelInvite(client.inviteToken)}
+                  className="text-xs text-red-500 px-2 py-1 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  Cancelar
+                </button>
+              </div>
             </div>
           ))}
         </div>

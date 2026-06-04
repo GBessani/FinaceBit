@@ -9,7 +9,7 @@ interface ConsultantContextType {
   activeClientId: string | null
   activeClientName: string | null
   setActiveClient: (id: string | null, name: string | null) => void
-  clients: { id: string; name: string; email: string; status: string }[]
+  clients: { id: string; name: string; email: string; status: string; inviteToken?: string }[]
   role: "user" | "consultant"
   myConsultant: { name: string; email: string } | null
   revokeConsultant: () => Promise<void>
@@ -58,7 +58,7 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
   async function loadClients() {
     const { data } = await supabase
       .from("consultant_clients")
-      .select("id, client_id, client_email, status")
+      .select("id, client_id, client_email, status, invite_token")
       .eq("consultant_id", user!.id)
 
     setClients((data || []).map((d: any) => ({
@@ -66,6 +66,7 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
       name: d.client_email || "Cliente",
       email: d.client_email || "",
       status: d.status,
+      inviteToken: d.invite_token,
     })))
   }
 
