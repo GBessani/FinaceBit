@@ -222,12 +222,13 @@ export function ScheduledList() {
     const category = getCategory(transaction.categoryId)
     return (
       <Card key={transaction.id} className={transaction.isCompleted ? "opacity-60" : ""}>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {category && (
               <CategoryIcon icon={category.icon} color={category.color} />
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="font-medium truncate">{transaction.description}</p>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-3 w-3 shrink-0" />
@@ -244,7 +245,9 @@ export function ScheduledList() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <div className="flex items-center gap-2">
             <p className={`font-semibold ${transaction.type === "expense" ? "text-destructive" : "text-primary"}`}>
               {transaction.type === "expense" ? "-" : "+"}{formatCurrency(transaction.amount)}
             </p>
@@ -275,6 +278,7 @@ export function ScheduledList() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -290,9 +294,9 @@ export function ScheduledList() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Lançamento
+            <Button onClick={() => handleOpenDialog()} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Novo </span>Lançamento
             </Button>
           </DialogTrigger>
           <DialogContent>
