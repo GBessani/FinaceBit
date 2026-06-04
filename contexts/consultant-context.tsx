@@ -58,13 +58,13 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
   async function loadClients() {
     const { data } = await supabase
       .from("consultant_clients")
-      .select("client_id, client_email, status, profiles!client_id(name, email)")
+      .select("id, client_id, client_email, status")
       .eq("consultant_id", user!.id)
 
     setClients((data || []).map((d: any) => ({
-      id: d.client_id,
-      name: d.profiles?.name || d.client_email,
-      email: d.profiles?.email || d.client_email,
+      id: d.client_id || d.id,
+      name: d.client_email || "Cliente",
+      email: d.client_email || "",
       status: d.status,
     })))
   }
