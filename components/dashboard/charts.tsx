@@ -1,3 +1,4 @@
+"use client"
 
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
@@ -226,7 +227,7 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
       .forEach(i => {
         // Determina o mês ativo da fatura para este cartão
         const card = data.creditCards.find(c => c.id === i.creditCardId)
-        if (!card) return
+        if (!card) { console.log("DEBUG card not found for", i.creditCardId, "cards:", data.creditCards.map(c=>c.id)); return }
         const day = today.getDate()
         let activeMonth: string
         if (day >= card.closingDay) {
