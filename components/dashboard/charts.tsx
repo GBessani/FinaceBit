@@ -235,7 +235,13 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
         const fmt2 = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
         const purchase2 = data.ccPurchases.find(p => p.id === i.purchaseId)
         const purchaseDate2 = purchase2?.purchaseDate ?? i.purchase?.purchaseDate ?? ""
-        console.log("DEBUG filter:", { closingDay: closingDay2, from: fmt2(closeFrom2), to: fmt2(closeTo2), purchaseDate: purchaseDate2, inWindow: purchaseDate2 >= fmt2(closeFrom2) && purchaseDate2 <= fmt2(closeTo2) })
+        const inW = purchaseDate2 >= fmt2(closeFrom2) && purchaseDate2 <= fmt2(closeTo2)
+        console.log("DEBUG filter:", { closingDay: closingDay2, from: fmt2(closeFrom2), to: fmt2(closeTo2), purchaseDate: purchaseDate2, inWindow: inW })
+        if (inW) {
+          const catId3 = (data.ccPurchases.find(p => p.id === i.purchaseId))?.categoryId ?? ""
+          const catName3 = catId3 ? (getCategory(catId3)?.name ?? "NOT_FOUND") : "NO_CAT"
+          console.log("DEBUG category:", { catId: catId3, catName: catName3, allCats: data.categories.length })
+        }
         const day = today.getDate()
         let activeMonth: string
         if (day >= card.closingDay) {
