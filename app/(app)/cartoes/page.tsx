@@ -36,17 +36,26 @@ export default function CartoesPage() {
   const today = new Date()
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`
 
-  // Calcula o mês da fatura ativa para um cartão
-  // Se hoje é ANTES do fechamento → fatura atual é do mês atual
-  // Se hoje é DEPOIS do fechamento → fatura atual é do próximo mês
-  function getActiveInvoiceMonth(closingDay: number): string {
+  // Retorna a janela de datas da fatura ativa (não paga)
+  // Fatura ativa = compras entre o fechamento anterior e o fechamento atual
+  function getInvoiceWindow(closingDay: number): { from: string; to: string } {
     const day = today.getDate()
-    if (day >= closingDay) {
-      // Já fechou — próxima fatura é do mês seguinte
-      const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
-      return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`
+
+    let closeFrom: Date
+    let closeTo: Date
+
+    if (day < closingDay) {
+      // Ainda não fechou este mês — janela: mês anterior (dia closingDay+1) até hoje
+      closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
+      closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
+    } else {
+      // Já fechou — janela: mês atual (dia closingDay+1) até próximo fechamento
+      closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
+      closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
     }
-    return currentMonthStr
+
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+    return { from: fmt(closeFrom), to: fmt(closeTo) }
   }
 
   const expenseCategories = data.categories.filter(c => c.type === "expense")
@@ -62,13 +71,16 @@ export default function CartoesPage() {
       let daysToDue = dueDay - currentDay
       if (daysToDue < 0) daysToDue += 30
 
-      // Mês da fatura ativa para este cartão
-      const activeMonth = getActiveInvoiceMonth(card.closingDay)
+      // Janela da fatura ativa para este cartão
+      const invoiceWindow = getInvoiceWindow(card.closingDay)
+      const activeMonth = invoiceWindow.to.slice(0, 7)
 
-      // Parcelas da fatura ativa não pagas
-      const currentInstallments = data.ccInstallments.filter(
-        i => i.creditCardId === card.id && i.dueMonth === activeMonth && !i.isPaid
-      )
+      // Parcelas da fatura ativa não pagas (pela data da compra na janela)
+      const currentInstallments = data.ccInstallments.filter(i => {
+        if (i.creditCardId !== card.id || i.isPaid) return false
+        const purchaseDate = i.purchase?.purchaseDate ?? ""
+        return purchaseDate >= invoiceWindow.from && purchaseDate <= invoiceWindow.to
+      })
       const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
 
       // Todas as compras do cartão (para listagem)
