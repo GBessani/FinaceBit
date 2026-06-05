@@ -1,4 +1,3 @@
-"use client"
 
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
@@ -213,6 +212,9 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
 }
 export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, getCategory } = useFinance()
+  console.log("DEBUG ccInstallments:", data.ccInstallments.length, "ccPurchases:", data.ccPurchases.length)
+  if (data.ccInstallments.length > 0) console.log("DEBUG first inst:", JSON.stringify(data.ccInstallments[0]))
+  if (data.ccPurchases.length > 0) console.log("DEBUG first purchase:", JSON.stringify(data.ccPurchases[0]))
   const currentMonth = selectedMonth ?? getCurrentMonth()
 
   const chartData = useMemo(() => {
