@@ -78,7 +78,8 @@ export default function CartoesPage() {
       // Parcelas da fatura ativa não pagas (pela data da compra na janela)
       const currentInstallments = data.ccInstallments.filter(i => {
         if (i.creditCardId !== card.id || i.isPaid) return false
-        const purchaseDate = i.purchase?.purchaseDate ?? ""
+        const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
+        const purchaseDate = purchase?.purchaseDate ?? i.purchase?.purchaseDate ?? ""
         return purchaseDate >= invoiceWindow.from && purchaseDate <= invoiceWindow.to
       })
       const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
