@@ -213,60 +213,38 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
 }
 export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, getCategory } = useFinance()
-  console.log("DEBUG ccInstallments:", data.ccInstallments.length, "ccPurchases:", data.ccPurchases.length)
-  if (data.ccInstallments.length > 0) console.log("DEBUG first inst:", JSON.stringify(data.ccInstallments[0]))
-  if (data.ccPurchases.length > 0) console.log("DEBUG first purchase:", JSON.stringify(data.ccPurchases[0]))
   const currentMonth = selectedMonth ?? getCurrentMonth()
 
   const chartData = useMemo(() => {
     const today = new Date()
     const byCategory: Record<string, number> = {}
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
 
-    data.ccInstallments
-      .filter(i => !i.isPaid)
-      .forEach(i => {
-        // Determina o mês ativo da fatura para este cartão
-        const card = data.creditCards.find(c => c.id === i.creditCardId)
-        if (!card) { console.log("DEBUG card not found"); return }
-        const day2 = today.getDate()
-        const closingDay2 = card.closingDay
-        const closeFrom2 = new Date(today.getFullYear(), today.getMonth() - 1, closingDay2 + 1)
-        const closeTo2 = new Date(today.getFullYear(), today.getMonth(), closingDay2)
-        const fmt2 = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
-        const purchase2 = data.ccPurchases.find(p => p.id === i.purchaseId)
-        const purchaseDate2 = purchase2?.purchaseDate ?? i.purchase?.purchaseDate ?? ""
-        const inW = purchaseDate2 >= fmt2(closeFrom2) && purchaseDate2 <= fmt2(closeTo2)
-        console.log("DEBUG filter:", { closingDay: closingDay2, from: fmt2(closeFrom2), to: fmt2(closeTo2), purchaseDate: purchaseDate2, inWindow: inW })
-        if (inW) {
-          const catId3 = (data.ccPurchases.find(p => p.id === i.purchaseId))?.categoryId ?? ""
-          const catName3 = catId3 ? (getCategory(catId3)?.name ?? "NOT_FOUND") : "NO_CAT"
-          console.log("DEBUG category:", { catId: catId3, catName: catName3, allCats: data.categories.length })
-        }
-        const day = today.getDate()
-        let activeMonth: string
-        if (day >= card.closingDay) {
-          const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
-          activeMonth = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,"0")}`
-        } else {
-          activeMonth = currentMonth
-        }
-        if (i.dueMonth !== activeMonth) return
+    data.ccInstallments.filter(i => !i.isPaid).forEach(i => {
+      const card = data.creditCards.find(c => c.id === i.creditCardId)
+      if (!card) return
 
-        const catId = i.purchase?.categoryId ?? "outros"
-        const catName = catId !== "outros" ? (getCategory(catId)?.name ?? "Outros") : "Outros"
-        byCategory[catName] = (byCategory[catName] || 0) + i.amount
-      })
-    return Object.entries(byCategory)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-  }, [data.ccInstallments, data.creditCards, currentMonth, getCategory])
+      const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, card.closingDay + 1)
+      const closeTo = new Date(today.getFullYear(), today.getMonth(), card.closingDay)
+
+      const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
+      const purchaseDate = purchase?.purchaseDate ?? ""
+      if (!purchaseDate || purchaseDate < fmt(closeFrom) || purchaseDate > fmt(closeTo)) return
+
+      const catId = purchase?.categoryId ?? ""
+      const catName = catId ? (getCategory(catId)?.name ?? "Outros") : "Outros"
+      byCategory[catName] = (byCategory[catName] || 0) + i.amount
+    })
+
+    return Object.entries(byCategory).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  }, [data.ccInstallments, data.ccPurchases, data.creditCards, getCategory])
 
   const total = chartData.reduce((s, d) => s + d.value, 0)
   const COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f97316","#10b981","#3b82f6","#0891b2"]
 
   if (chartData.length === 0) return (
     <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-      <h3 className="font-semibold mb-4">Gastos no Cartão por Categoria</h3>
+      <h3 className="font-semibold mb-4">💳 Gastos no Cartão por Categoria</h3>
       <p className="text-center text-muted-foreground text-sm py-8">Nenhuma compra no cartão este mês</p>
     </div>
   )
@@ -279,7 +257,7 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
           <div key={item.name}>
             <div className="flex items-center justify-between text-sm mb-1">
               <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                 {item.name}
               </span>
               <span className="font-medium">{formatCurrency(item.value)}</span>
