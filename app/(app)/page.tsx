@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { DashboardSummary } from "@/components/dashboard/dashboard-summary"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
-import { ExpenseChart, MonthlyChart } from "@/components/dashboard/charts"
+import { ExpenseChart, MonthlyChart, CreditCardChart } from "@/components/dashboard/charts"
 import { UpcomingOverview } from "@/components/dashboard/upcoming-overview"
 import { AlertBanner } from "@/components/dashboard/alert-banner"
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour"
@@ -31,6 +31,7 @@ export default function DashboardPage() {
       <div data-tour="charts" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ExpenseChart selectedMonth={selectedMonth} />
         <MonthlyChart selectedMonth={selectedMonth} />
+        <CreditCardChart selectedMonth={selectedMonth} />
       </div>
 
       <div data-tour="recent"><RecentTransactions /></div>

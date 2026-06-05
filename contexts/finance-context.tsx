@@ -14,6 +14,8 @@ import {
   CreditCard,
   InvestmentTransaction,
   Budget,
+  CreditCardPurchase,
+  CreditCardInstallment,
 } from "@/lib/types"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
@@ -160,6 +162,11 @@ interface FinanceContextType {
   initialBalance: number
   setInitialBalance: (value: number) => Promise<void>
   budgets: Budget[]
+  ccPurchases: CreditCardPurchase[]
+  ccInstallments: CreditCardInstallment[]
+  addCCPurchase: (purchase: Omit<CreditCardPurchase, "id" | "createdAt">, installments: number) => Promise<void>
+  payCCInvoice: (cardId: string, month: string, totalAmount: number) => Promise<void>
+  deleteCCPurchase: (purchaseId: string) => Promise<void>
   addBudget: (b: Omit<Budget, "id">) => Promise<void>
   updateBudget: (b: Budget) => Promise<void>
   deleteBudget: (id: string) => Promise<void>
@@ -191,12 +198,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     creditCards: [],
     investmentTransactions: [],
     budgets: [],
+    ccPurchases: [],
+    ccInstallments: [],
   })
   const [isLoaded, setIsLoaded] = React.useState(false)
   const [initialBalance, setInitialBalanceState] = React.useState(0)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs, budgets] = await Promise.all([
+    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs, budgets, ccPurchases, ccInstallments] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
@@ -206,6 +215,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       supabase.from("credit_cards").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("investment_transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("budgets").select("*").eq("user_id", userId),
+      supabase.from("credit_card_purchases").select("*").eq("user_id", userId).order("purchase_date", { ascending: false }),
+      supabase.from("credit_card_installments").select("*, credit_card_purchases(*)").eq("user_id", userId),
     ])
 
     setData({
@@ -218,6 +229,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       creditCards: (cards.data ?? []).map(mapCreditCard),
       investmentTransactions: (invTxs.data ?? []).map(mapInvestmentTransaction),
       budgets: (budgets.data ?? []).map((r: Record<string, unknown>) => ({ id: r.id as string, categoryId: r.category_id as string, amount: Number(r.amount), month: r.month as string })),
+      ccPurchases: (ccPurchases.data ?? []).map((r: any) => ({
+        id: r.id, creditCardId: r.credit_card_id, description: r.description,
+        totalAmount: Number(r.total_amount), installments: r.installments,
+        categoryId: r.category_id, purchaseDate: r.purchase_date, notes: r.notes, createdAt: r.created_at,
+      })),
+      ccInstallments: (ccInstallments.data ?? []).map((r: any) => ({
+        id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
+        installmentNum: r.installment_num, dueMonth: r.due_month,
+        amount: Number(r.amount), isPaid: r.is_paid, paidAt: r.paid_at,
+        transactionId: r.transaction_id,
+        purchase: r.credit_card_purchases ? {
+          id: r.credit_card_purchases.id, creditCardId: r.credit_card_purchases.credit_card_id,
+          description: r.credit_card_purchases.description, totalAmount: Number(r.credit_card_purchases.total_amount),
+          installments: r.credit_card_purchases.installments, categoryId: r.credit_card_purchases.category_id,
+          purchaseDate: r.credit_card_purchases.purchase_date, notes: r.credit_card_purchases.notes,
+          createdAt: r.credit_card_purchases.created_at,
+        } : undefined,
+      })),
     })
 
     // Load initial balance
@@ -498,6 +527,108 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setInitialBalanceState(value)
   }, [user, supabase])
 
+  const addCCPurchase = React.useCallback(async (purchase: Omit<CreditCardPurchase, "id" | "createdAt">, installments: number) => {
+    if (!user) return
+    const userId = targetUserIdRef.current || user.id
+
+    // Insert purchase
+    const { data: pRow } = await supabase.from("credit_card_purchases").insert({
+      user_id: userId, credit_card_id: purchase.creditCardId,
+      description: purchase.description, total_amount: purchase.totalAmount,
+      installments, category_id: purchase.categoryId || null,
+      purchase_date: purchase.purchaseDate, notes: purchase.notes ?? null,
+    }).select().single()
+
+    if (!pRow) return
+
+    // Insert installments
+    const instRows = []
+    for (let i = 1; i <= installments; i++) {
+      const [year, month] = purchase.purchaseDate.split("-").map(Number)
+      const d = new Date(year, month - 1 + (i - 1), 1)
+      const dueMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      instRows.push({
+        purchase_id: pRow.id, user_id: userId,
+        credit_card_id: purchase.creditCardId,
+        installment_num: i, due_month: dueMonth,
+        amount: Math.round((purchase.totalAmount / installments) * 100) / 100,
+        is_paid: false,
+      })
+    }
+
+    const { data: instData } = await supabase.from("credit_card_installments").insert(instRows).select("*, credit_card_purchases(*)")
+
+    const newPurchase: CreditCardPurchase = {
+      id: pRow.id, creditCardId: pRow.credit_card_id, description: pRow.description,
+      totalAmount: Number(pRow.total_amount), installments: pRow.installments,
+      categoryId: pRow.category_id, purchaseDate: pRow.purchase_date,
+      notes: pRow.notes, createdAt: pRow.created_at,
+    }
+
+    const newInstallments: CreditCardInstallment[] = (instData ?? []).map((r: any) => ({
+      id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
+      installmentNum: r.installment_num, dueMonth: r.due_month,
+      amount: Number(r.amount), isPaid: r.is_paid, purchase: newPurchase,
+    }))
+
+    setData(prev => ({
+      ...prev,
+      ccPurchases: [newPurchase, ...prev.ccPurchases],
+      ccInstallments: [...prev.ccInstallments, ...newInstallments],
+    }))
+  }, [user, supabase])
+
+  const payCCInvoice = React.useCallback(async (cardId: string, month: string, totalAmount: number) => {
+    if (!user) return
+    const userId = targetUserIdRef.current || user.id
+
+    // Create transaction for total
+    const { data: txRow } = await supabase.from("transactions").insert({
+      user_id: userId,
+      description: `Fatura cartão`,
+      amount: totalAmount,
+      type: "expense",
+      category_id: null,
+      date: new Date().toISOString().split("T")[0],
+      wallet: "digital",
+    }).select().single()
+
+    if (!txRow) return
+
+    // Mark installments as paid
+    await supabase.from("credit_card_installments")
+      .update({ is_paid: true, paid_at: new Date().toISOString(), transaction_id: txRow.id })
+      .eq("credit_card_id", cardId)
+      .eq("due_month", month)
+      .eq("is_paid", false)
+
+    // Update state
+    const newTx = {
+      id: txRow.id, description: txRow.description, amount: Number(txRow.amount),
+      type: txRow.type as "income" | "expense" | "transfer", categoryId: txRow.category_id ?? "",
+      date: txRow.date, wallet: (txRow.wallet ?? "digital") as "digital" | "cash",
+    }
+
+    setData(prev => ({
+      ...prev,
+      transactions: [newTx, ...prev.transactions],
+      ccInstallments: prev.ccInstallments.map((inst: CreditCardInstallment) =>
+        inst.creditCardId === cardId && inst.dueMonth === month && !inst.isPaid
+          ? { ...inst, isPaid: true, paidAt: new Date().toISOString(), transactionId: txRow.id }
+          : inst
+      ),
+    }))
+  }, [user, supabase])
+
+  const deleteCCPurchase = React.useCallback(async (purchaseId: string) => {
+    await supabase.from("credit_card_purchases").delete().eq("id", purchaseId)
+    setData(prev => ({
+      ...prev,
+      ccPurchases: prev.ccPurchases.filter((p: CreditCardPurchase) => p.id !== purchaseId),
+      ccInstallments: prev.ccInstallments.filter((i: CreditCardInstallment) => i.purchaseId !== purchaseId),
+    }))
+  }, [supabase])
+
   const addBudget = React.useCallback(async (b: Omit<Budget, "id">) => {
     if (!user) return
     const { data: row } = await supabase.from("budgets").upsert({
@@ -608,6 +739,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       creditCards: data.creditCards,
       budgets: data.budgets ?? [],
       addBudget, updateBudget, deleteBudget,
+      ccPurchases: data.ccPurchases ?? [],
+      ccInstallments: data.ccInstallments ?? [],
+      addCCPurchase, payCCInvoice, deleteCCPurchase,
       investmentTransactions: data.investmentTransactions ?? [],
       addInvestmentTransaction, deleteInvestmentTransaction,
       addCreditCard, updateCreditCard, deleteCreditCard,

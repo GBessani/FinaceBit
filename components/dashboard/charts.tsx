@@ -211,3 +211,57 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
     </div>
   )
 }
+export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = {}) {
+  const { data, getCategory } = useFinance()
+  const currentMonth = selectedMonth ?? getCurrentMonth()
+
+  const chartData = useMemo(() => {
+    const byCategory: Record<string, number> = {}
+    data.ccInstallments
+      .filter(i => i.dueMonth === currentMonth)
+      .forEach(i => {
+        const catId = i.purchase?.categoryId ?? "outros"
+        const catName = catId !== "outros" ? (getCategory(catId)?.name ?? "Outros") : "Outros"
+        byCategory[catName] = (byCategory[catName] || 0) + i.amount
+      })
+    return Object.entries(byCategory)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [data.ccInstallments, currentMonth, getCategory])
+
+  const total = chartData.reduce((s, d) => s + d.value, 0)
+  const COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f97316","#10b981","#3b82f6","#0891b2"]
+
+  if (chartData.length === 0) return (
+    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <h3 className="font-semibold mb-4">Gastos no Cartão por Categoria</h3>
+      <p className="text-center text-muted-foreground text-sm py-8">Nenhuma compra no cartão este mês</p>
+    </div>
+  )
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <h3 className="font-semibold mb-4">💳 Gastos no Cartão por Categoria</h3>
+      <div className="flex flex-col gap-2">
+        {chartData.map((item, i) => (
+          <div key={item.name}>
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                {item.name}
+              </span>
+              <span className="font-medium">{formatCurrency(item.value)}</span>
+            </div>
+            <div className="w-full bg-secondary rounded-full h-1.5">
+              <div className="h-full rounded-full" style={{ width: `${(item.value/total)*100}%`, backgroundColor: COLORS[i % COLORS.length] }} />
+            </div>
+          </div>
+        ))}
+        <div className="pt-2 border-t border-border flex justify-between text-sm font-semibold mt-1">
+          <span>Total</span>
+          <span>{formatCurrency(total)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}

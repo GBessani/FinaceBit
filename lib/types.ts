@@ -71,6 +71,8 @@ export interface FinancialData {
   goals: Goal[]
   fixedBills: FixedBill[]
   scheduledTransactions: ScheduledTransaction[]
+  ccPurchases: CreditCardPurchase[]
+  ccInstallments: CreditCardInstallment[]
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -134,4 +136,29 @@ export interface Budget {
   categoryId: string
   amount: number
   month: string // YYYY-MM ou "recorrente"
+}
+export interface CreditCardPurchase {
+  id: string
+  creditCardId: string
+  description: string
+  totalAmount: number
+  installments: number
+  categoryId?: string
+  purchaseDate: string
+  notes?: string
+  createdAt: string
+}
+
+export interface CreditCardInstallment {
+  id: string
+  purchaseId: string
+  creditCardId: string
+  installmentNum: number
+  dueMonth: string // YYYY-MM
+  amount: number
+  isPaid: boolean
+  paidAt?: string
+  transactionId?: string
+  // joined
+  purchase?: CreditCardPurchase
 }
