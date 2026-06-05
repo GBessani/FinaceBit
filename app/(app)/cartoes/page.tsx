@@ -35,6 +35,20 @@ export default function CartoesPage() {
 
   const today = new Date()
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`
+
+  // Calcula o mês da fatura ativa para um cartão
+  // Se hoje é ANTES do fechamento → fatura atual é do mês atual
+  // Se hoje é DEPOIS do fechamento → fatura atual é do próximo mês
+  function getActiveInvoiceMonth(closingDay: number): string {
+    const day = today.getDate()
+    if (day >= closingDay) {
+      // Já fechou — próxima fatura é do mês seguinte
+      const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+      return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`
+    }
+    return currentMonthStr
+  }
+
   const expenseCategories = data.categories.filter(c => c.type === "expense")
 
   const cardData = useMemo(() => {
@@ -48,9 +62,12 @@ export default function CartoesPage() {
       let daysToDue = dueDay - currentDay
       if (daysToDue < 0) daysToDue += 30
 
-      // Parcelas do mês atual não pagas
+      // Mês da fatura ativa para este cartão
+      const activeMonth = getActiveInvoiceMonth(card.closingDay)
+
+      // Parcelas da fatura ativa não pagas
       const currentInstallments = data.ccInstallments.filter(
-        i => i.creditCardId === card.id && i.dueMonth === currentMonthStr && !i.isPaid
+        i => i.creditCardId === card.id && i.dueMonth === activeMonth && !i.isPaid
       )
       const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
 
@@ -63,7 +80,7 @@ export default function CartoesPage() {
       const status = invoiceTotal > 0 && daysToDue <= 5 ? "due" :
                      invoiceTotal > 0 && daysToClose <= 3 ? "closing" : "ok"
 
-      return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed }
+      return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }
     })
   }, [data.creditCards, data.ccInstallments, currentMonthStr, today])
 
@@ -101,8 +118,8 @@ export default function CartoesPage() {
     setPurchaseErrors({})
   }
 
-  function openPayInvoice(cardId: string, installments: CreditCardInstallment[], total: number) {
-    setPayingInvoice({ cardId, month: currentMonthStr, total, installments })
+  function openPayInvoice(cardId: string, installments: CreditCardInstallment[], total: number, activeMonth: string) {
+    setPayingInvoice({ cardId, month: activeMonth, total, installments })
   }
 
   async function confirmPayInvoice() {
@@ -132,7 +149,7 @@ export default function CartoesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {cardData.map(({ card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed }) => (
+          {cardData.map(({ card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }) => (
             <div key={card.id} className={`bg-card border rounded-xl shadow-sm overflow-hidden ${
               status === "due" ? "border-red-300 dark:border-red-800" :
               status === "closing" ? "border-amber-300 dark:border-amber-800" : "border-border"
@@ -189,7 +206,7 @@ export default function CartoesPage() {
                   <ShoppingCart className="h-4 w-4" /> Registrar Compra
                 </button>
                 {currentInstallments.length > 0 && (
-                  <button onClick={() => openPayInvoice(card.id, currentInstallments, invoiceTotal)}
+                  <button onClick={() => openPayInvoice(card.id, currentInstallments, invoiceTotal, activeMonth)}
                     className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors">
                     <CheckCircle2 className="h-4 w-4" /> Pagar Fatura
                   </button>

@@ -216,10 +216,25 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
   const currentMonth = selectedMonth ?? getCurrentMonth()
 
   const chartData = useMemo(() => {
+    const today = new Date()
     const byCategory: Record<string, number> = {}
+
     data.ccInstallments
-      .filter(i => i.dueMonth === currentMonth)
+      .filter(i => !i.isPaid)
       .forEach(i => {
+        // Determina o mês ativo da fatura para este cartão
+        const card = data.creditCards.find(c => c.id === i.creditCardId)
+        if (!card) return
+        const day = today.getDate()
+        let activeMonth: string
+        if (day >= card.closingDay) {
+          const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+          activeMonth = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,"0")}`
+        } else {
+          activeMonth = currentMonth
+        }
+        if (i.dueMonth !== activeMonth) return
+
         const catId = i.purchase?.categoryId ?? "outros"
         const catName = catId !== "outros" ? (getCategory(catId)?.name ?? "Outros") : "Outros"
         byCategory[catName] = (byCategory[catName] || 0) + i.amount
@@ -227,7 +242,7 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
     return Object.entries(byCategory)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [data.ccInstallments, currentMonth, getCategory])
+  }, [data.ccInstallments, data.creditCards, currentMonth, getCategory])
 
   const total = chartData.reduce((s, d) => s + d.value, 0)
   const COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f97316","#10b981","#3b82f6","#0891b2"]
