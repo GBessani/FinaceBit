@@ -234,8 +234,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         totalAmount: Number(r.total_amount), installments: r.installments,
         categoryId: r.category_id, purchaseDate: r.purchase_date, notes: r.notes, createdAt: r.created_at,
       })),
-      // DEBUG
-      console.log("ccInstallments raw:", JSON.stringify((ccInstallments.data ?? []).slice(0,1), null, 2))
       ccInstallments: (ccInstallments.data ?? []).map((r: any) => {
         const p = Array.isArray(r.credit_card_purchases) ? r.credit_card_purchases[0] : r.credit_card_purchases
         return {
