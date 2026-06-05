@@ -398,6 +398,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount, type: t.type,
       category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
       is_completed: t.isCompleted, notes: t.notes ?? null,
+      credit_card_id: t.creditCardId ?? null,
+      installment_number: t.installmentNumber ?? null,
+      total_installments: t.totalInstallments ?? null,
     }).select().single()
     if (row) setData(prev => ({ ...prev, scheduledTransactions: [...prev.scheduledTransactions, mapScheduledTransaction(row)] }))
   }, [user, supabase])
@@ -407,6 +410,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       description: t.description, amount: t.amount, type: t.type,
       category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
       is_completed: t.isCompleted, notes: t.notes ?? null,
+      credit_card_id: t.creditCardId ?? null,
     }).eq("id", t.id).select().single()
     if (row) setData(prev => ({ ...prev, scheduledTransactions: prev.scheduledTransactions.map(x => x.id === t.id ? mapScheduledTransaction(row) : x) }))
   }, [supabase])
