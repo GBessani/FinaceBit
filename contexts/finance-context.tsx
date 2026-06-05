@@ -234,19 +234,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         totalAmount: Number(r.total_amount), installments: r.installments,
         categoryId: r.category_id, purchaseDate: r.purchase_date, notes: r.notes, createdAt: r.created_at,
       })),
-      ccInstallments: (ccInstallments.data ?? []).map((r: any) => ({
-        id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
-        installmentNum: r.installment_num, dueMonth: r.due_month,
-        amount: Number(r.amount), isPaid: r.is_paid, paidAt: r.paid_at,
-        transactionId: r.transaction_id,
-        purchase: r.credit_card_purchases ? {
-          id: r.credit_card_purchases.id, creditCardId: r.credit_card_purchases.credit_card_id,
-          description: r.credit_card_purchases.description, totalAmount: Number(r.credit_card_purchases.total_amount),
-          installments: r.credit_card_purchases.installments, categoryId: r.credit_card_purchases.category_id,
-          purchaseDate: r.credit_card_purchases.purchase_date, notes: r.credit_card_purchases.notes,
-          createdAt: r.credit_card_purchases.created_at,
-        } : undefined,
-      })),
+      ccInstallments: (ccInstallments.data ?? []).map((r: any) => {
+        const p = Array.isArray(r.credit_card_purchases) ? r.credit_card_purchases[0] : r.credit_card_purchases
+        return {
+          id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
+          installmentNum: r.installment_num, dueMonth: r.due_month,
+          amount: Number(r.amount), isPaid: r.is_paid, paidAt: r.paid_at,
+          transactionId: r.transaction_id,
+          purchase: p ? {
+            id: p.id, creditCardId: p.credit_card_id,
+            description: p.description, totalAmount: Number(p.total_amount),
+            installments: p.installments, categoryId: p.category_id,
+            purchaseDate: p.purchase_date, notes: p.notes,
+            createdAt: p.created_at,
+          } : undefined,
+        }
+      }),
     })
 
     // Load initial balance
@@ -568,7 +571,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const newInstallments: CreditCardInstallment[] = (instData ?? []).map((r: any) => ({
       id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
       installmentNum: r.installment_num, dueMonth: r.due_month,
-      amount: Number(r.amount), isPaid: r.is_paid, purchase: newPurchase,
+      amount: Number(r.amount), isPaid: false, purchase: newPurchase,
     }))
 
     setData(prev => ({
