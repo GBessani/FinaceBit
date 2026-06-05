@@ -3,6 +3,7 @@ import { ConsultantBanner } from "@/components/layout/consultant-banner"
 import { FinanceProvider } from "@/contexts/finance-context"
 import { Sidebar } from "@/components/layout/sidebar"
 import { AIAssistant } from "@/components/ai/ai-assistant"
+import { PWAInstallBanner } from "@/components/layout/pwa-install-banner"
 import { Toaster } from "sonner"
 import { createClient } from "@/lib/supabase/server"
 
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </main>
           </div>
           <AIAssistant />
+          <PWAInstallBanner />
           <Toaster richColors position="top-right" />
         </div>
       </FinanceProvider>
