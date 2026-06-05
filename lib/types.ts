@@ -16,6 +16,7 @@ export interface Transaction {
   categoryId: string
   date: string
   notes?: string
+  wallet?: "digital" | "cash"
 }
 
 export interface Goal {

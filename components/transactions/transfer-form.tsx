@@ -43,6 +43,7 @@ export function TransferForm({ onClose }: TransferFormProps) {
         categoryId: "",
         date,
         notes: notes || `De ${fromLabel} para ${toLabel}`,
+        wallet: "digital",
       })
       toast.success("Transferência registrada!")
       onClose()

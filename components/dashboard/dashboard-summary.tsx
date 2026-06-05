@@ -54,6 +54,32 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
     return (initialBalance ?? 0) + allIncome - allExpenses
   }, [data.transactions, initialBalance])
 
+  // Saldo por carteira
+  const walletBalances = useMemo(() => {
+    let digital = initialBalance ?? 0
+    let cash = 0
+    data.transactions.forEach(t => {
+      if (t.type === "transfer") {
+        // Transferência: detecta direção pelo description
+        if (t.description.includes("Conta Digital → Dinheiro Físico") || t.description.includes("Conta Digital →")) {
+          digital -= t.amount; cash += t.amount
+        } else if (t.description.includes("Dinheiro Físico → Conta Digital") || t.description.includes("Físico → Conta")) {
+          cash -= t.amount; digital += t.amount
+        }
+        return
+      }
+      const wallet = (t.wallet ?? "digital") as "digital" | "cash"
+      if (t.type === "income") {
+        if (wallet === "digital") digital += t.amount
+        else cash += t.amount
+      } else if (t.type === "expense") {
+        if (wallet === "digital") digital -= t.amount
+        else cash -= t.amount
+      }
+    })
+    return { digital, cash }
+  }, [data.transactions, initialBalance])
+
   // Mês anterior para comparativo
   const prevMonthKey = useMemo(() => {
     const d = new Date(year, month - 1, 1)
@@ -174,24 +200,30 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
           )}
         </div>
 
-        {/* Saldo */}
-        <div className={`border rounded-xl p-5 shadow-sm ${totalBalance >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Saldo Total</span>
-            <div className={`p-2 rounded-lg ${totalBalance >= 0 ? "bg-primary/10" : "bg-red-100 dark:bg-red-900/30"}`}>
-              {totalBalance >= 0 ? (
-                <Wallet className="h-4 w-4 text-primary" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
-              )}
+        {/* Saldo por carteira */}
+        <div className="flex flex-col gap-3">
+          <div className={`border rounded-xl p-4 shadow-sm ${walletBalances.digital >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">🏦 Conta Digital</span>
+              <Wallet className="h-4 w-4 text-primary" />
             </div>
+            <p className={`text-xl font-bold ${walletBalances.digital < 0 ? "text-red-600 dark:text-red-400" : ""}`}>
+              {formatCurrency(walletBalances.digital)}
+            </p>
           </div>
-          <p className={`text-2xl font-bold ${totalBalance >= 0 ? "text-foreground" : "text-red-600 dark:text-red-400"}`}>
-            {formatCurrency(totalBalance)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {isFutureMonth ? "🔮 " : ""}{balance >= 0 ? "+" : ""}{formatCurrency(balance)} em {getMonthName(month)}
-          </p>
+          <div className={`border rounded-xl p-4 shadow-sm ${walletBalances.cash >= 0 ? "bg-card border-border" : "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">💵 Dinheiro Físico</span>
+              <Wallet className="h-4 w-4 text-amber-500" />
+            </div>
+            <p className={`text-xl font-bold ${walletBalances.cash < 0 ? "text-red-600 dark:text-red-400" : ""}`}>
+              {formatCurrency(walletBalances.cash)}
+            </p>
+          </div>
+          <div className="border border-dashed border-border rounded-xl px-4 py-3 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className={`font-bold ${totalBalance < 0 ? "text-red-600" : ""}`}>{formatCurrency(totalBalance)}</span>
+          </div>
         </div>
       </div>
     </div>

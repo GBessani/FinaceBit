@@ -264,6 +264,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const { data: row, error } = await supabase.from("transactions").insert({
       user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
+      wallet: t.wallet ?? "digital",
     }).select().single()
     if (error) { toast.error("Erro ao salvar transação."); return }
     if (row) {
@@ -276,6 +277,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const { data: row } = await supabase.from("transactions").update({
       description: t.description, amount: t.amount, type: t.type,
       category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
+      wallet: t.wallet ?? "digital",
     }).eq("id", t.id).select().single()
     if (row) setData(prev => ({ ...prev, transactions: prev.transactions.map(x => x.id === t.id ? mapTransaction(row) : x) }))
   }, [supabase])

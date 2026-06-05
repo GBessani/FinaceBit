@@ -251,15 +251,16 @@ interface TransactionFormProps {
 
 function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
   const { data } = useFinance()
-  const [form, setForm] = useState({
-    type: "expense" as TransactionType,
+  const [form, setForm] = useState<{type: TransactionType; description: string; amount: string; categoryId: string; date: string; wallet: "digital"|"cash"}>({
+    type: "expense",
     description: "",
     amount: "",
     categoryId: "",
     date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(),
+    wallet: "digital",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { type, description, amount, categoryId, date } = form
+  const { type, description, amount, categoryId, date, wallet } = form
   const setType = (v: TransactionType) => setForm(p => ({ ...p, type: v }))
   const setDescription = (v: string) => setForm(p => ({ ...p, description: v }))
   const setAmount = (v: string) => setForm(p => ({ ...p, amount: v }))
@@ -290,8 +291,9 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
       type,
       categoryId,
       date,
+      wallet,
     })
-    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })() })
+    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), wallet: "digital" as "digital" | "cash" })
     setErrors({})
   }
 
