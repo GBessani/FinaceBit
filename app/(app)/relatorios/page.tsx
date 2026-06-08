@@ -72,6 +72,16 @@ export default function RelatoriosPage() {
     data.transactions.filter(t => t.date >= startDate && t.date <= endDate)
   , [data.transactions, startDate, endDate])
 
+  // Compras de cartão pagas no período (pela data da compra)
+  const filteredCCPurchases = useMemo(() =>
+    data.ccPurchases.filter(p => p.purchaseDate >= startDate && p.purchaseDate <= endDate)
+  , [data.ccPurchases, startDate, endDate])
+
+  // Total gasto no cartão no período
+  const totalCCExpenses = useMemo(() =>
+    filteredCCPurchases.reduce((s, p) => s + p.totalAmount, 0)
+  , [filteredCCPurchases])
+
   const yearlyData = useMemo(() => {
     const months: Record<string, { month: string; income: number; expense: number; balance: number }> = {}
 
@@ -164,6 +174,10 @@ export default function RelatoriosPage() {
     filteredTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
   , [filteredTransactions])
 
+  const totalExpensesWithCC = useMemo(() =>
+    totalExpenses + totalCCExpenses
+  , [totalExpenses, totalCCExpenses])
+
   const expensesByCategory = useMemo(() => {
     const grouped: Record<string, { name: string; value: number; color: string }> = {}
 
@@ -178,8 +192,17 @@ export default function RelatoriosPage() {
         grouped[name].value += t.amount
       })
 
+    // Compras de cartão
+    filteredCCPurchases.forEach(p => {
+      const category = p.categoryId ? getCategory(p.categoryId) : null
+      const name = (category?.name || "Outros") + " (Cartão)"
+      const color = category?.color || "#6366f1"
+      if (!grouped[name]) grouped[name] = { name, value: 0, color }
+      grouped[name].value += p.totalAmount
+    })
+
     return Object.values(grouped).sort((a, b) => b.value - a.value)
-  }, [filteredTransactions, getCategory])
+  }, [filteredTransactions, filteredCCPurchases, getCategory])
 
   const averageMonthlyExpense = useMemo(() => {
     const monthsWithData = new Set(
