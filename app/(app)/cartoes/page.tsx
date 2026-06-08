@@ -1,551 +1,445 @@
 "use client"
 
-import * as React from "react"
-import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
-import { ScheduledTransaction } from "@/lib/types"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { CreditCard as CreditCardType, CreditCardInstallment } from "@/lib/types"
+import { formatCurrency } from "@/lib/utils"
+import { useState, useMemo } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { CategoryIcon } from "@/components/category-icon"
-import { formatCurrency, getMonthName } from "@/lib/utils"
-import { format, differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { Plus, Trash2, Edit, CalendarClock, CheckCircle2, Clock, AlertCircle } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
+  CreditCard as CardIcon, Plus, Trash2, Pencil,
+  ShoppingCart, ChevronDown, ChevronUp, X, AlertTriangle, CheckCircle2
+} from "lucide-react"
+import { DeleteConfirm } from "@/components/ui/delete-confirm"
+import { toast } from "sonner"
 
-export function ScheduledList() {
-  const {
-    data,
-    addScheduledTransaction,
-    updateScheduledTransaction,
-    deleteScheduledTransaction,
-    addTransaction,
-    getCategory,
-  } = useFinance()
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [errors, setErrors] = React.useState<Record<string, string>>({})
-  const [deleteId, setDeleteId] = React.useState<string | null>(null)
-  const [editingTransaction, setEditingTransaction] = React.useState<ScheduledTransaction | null>(null)
-  const [description, setDescription] = React.useState("")
-  const [amount, setAmount] = React.useState("")
-  const [type, setType] = React.useState<"income" | "expense" | "transfer">("expense")
-  const [categoryId, setCategoryId] = React.useState("")
-  const [scheduledDate, setScheduledDate] = React.useState("")
-  const [notes, setNotes] = React.useState("")
-  const [isInstallment, setIsInstallment] = React.useState(false)
-  const [totalInstallments, setTotalInstallments] = React.useState("2")
-  const [totalAmount, setTotalAmount] = React.useState("")
+const CARD_COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f97316","#10b981","#3b82f6","#0891b2"]
+const emptyCard = { name: "", limitAmount: "", dueDay: "10", color: "#6366f1" }
 
-  const filteredCategories = data.categories.filter((c) => c.type === type)
+export default function CartoesPage() {
+  const { data, addCreditCard, updateCreditCard, deleteCreditCard, addCCPurchase, payCCInvoice, deleteCCPurchase } = useFinance()
 
-  const resetForm = () => {
-    setDescription("")
-    setAmount("")
-    setType("expense")
-    setCategoryId("")
-    setScheduledDate("")
-    setNotes("")
-    setIsInstallment(false)
-    setTotalInstallments("2")
-    setTotalAmount("")
-    setEditingTransaction(null)
-  }
+  const [showCardForm, setShowCardForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteCardId, setDeleteCardId] = useState<string | null>(null)
+  const [cardForm, setCardForm] = useState(emptyCard)
+  const [expandedCard, setExpandedCard] = useState<string | null>(null)
+  const [showPurchaseForm, setShowPurchaseForm] = useState<string | null>(null)
+  const [payingInvoice, setPayingInvoice] = useState<{ cardId: string; month: string; total: number; installments: CreditCardInstallment[] } | null>(null)
+  const [deletePurchaseId, setDeletePurchaseId] = useState<string | null>(null)
 
-  const handleOpenDialog = (transaction?: ScheduledTransaction) => {
-    if (transaction) {
-      setEditingTransaction(transaction)
-      setDescription(transaction.description)
-      setAmount(transaction.amount.toString())
-      setType(transaction.type)
-      setCategoryId(transaction.categoryId)
-      setScheduledDate(transaction.scheduledDate)
-      setNotes(transaction.notes || "")
-    } else {
-      resetForm()
-      setScheduledDate(new Date().toISOString().split("T")[0])
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const finalAmount = isInstallment && totalAmount && totalInstallments
-      ? parseFloat(totalAmount) / parseInt(totalInstallments)
-      : parseFloat(amount)
-    if (!description || !finalAmount || !categoryId || !scheduledDate) return
-
-    if (editingTransaction) {
-      updateScheduledTransaction({
-        ...editingTransaction,
-        description,
-        amount: finalAmount,
-        type,
-        categoryId,
-        scheduledDate,
-        notes: notes || undefined,
-      })
-    } else if (isInstallment && totalInstallments) {
-      const total = parseInt(totalInstallments)
-      for (let i = 0; i < total; i++) {
-        const date = new Date(scheduledDate)
-        date.setMonth(date.getMonth() + i)
-        await addScheduledTransaction({
-          id: "",
-          description: `${description} (${i + 1}/${total})`,
-          amount: finalAmount,
-          type,
-          categoryId,
-          scheduledDate: date.toISOString().split("T")[0],
-          isCompleted: false,
-          notes: notes || undefined,
-        })
-      }
-    } else {
-      addScheduledTransaction({
-        id: "",
-        description,
-        amount: finalAmount,
-        type,
-        categoryId,
-        scheduledDate,
-        isCompleted: false,
-        notes: notes || undefined,
-      })
-    }
-
-    setIsDialogOpen(false)
-    resetForm()
-  }
-
-  const markAsCompleted = (transaction: ScheduledTransaction) => {
-    // Adiciona como transação real
-    addTransaction({
-      id: crypto.randomUUID(),
-      description: transaction.description,
-      amount: transaction.amount,
-      type: transaction.type,
-      categoryId: transaction.categoryId,
-      date: transaction.scheduledDate,
-      wallet: "digital" as const,
-      notes: transaction.notes,
-    })
-    // Marca como completado
-    updateScheduledTransaction({ ...transaction, isCompleted: true })
-  }
+  const [purchaseForm, setPurchaseForm] = useState({
+    description: "", amount: "", categoryId: "",
+    date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })(),
+    installments: "1",
+  })
+  const [purchaseErrors, setPurchaseErrors] = useState<Record<string, string>>({})
 
   const today = new Date()
-  const todayStr = today.toISOString().split("T")[0]
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`
 
-  const pendingTransactions = data.scheduledTransactions
-    .filter((t) => !t.isCompleted)
-    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
+  // Retorna a janela de datas da fatura ativa (não paga)
+  // Fatura ativa = compras entre o fechamento anterior e o fechamento atual
+  function getInvoiceWindow(closingDay: number): { from: string; to: string } {
+    const day = today.getDate()
 
-  const overdueTransactions = pendingTransactions.filter(
-    (t) => isBefore(parseISO(t.scheduledDate), today) && !isToday(parseISO(t.scheduledDate))
-  )
-  const todayTransactions = pendingTransactions.filter((t) => isToday(parseISO(t.scheduledDate)))
-  const upcomingTransactions = pendingTransactions.filter((t) => isAfter(parseISO(t.scheduledDate), today))
+    let closeFrom: Date
+    let closeTo: Date
 
-  // Agrupa por mês → por categoria
-  const groupedByMonth = React.useMemo(() => {
-    const months: Record<string, {
-      label: string
-      key: string
-      transactions: typeof pendingTransactions
-      byCategory: Record<string, { name: string; color: string; icon: string; transactions: typeof pendingTransactions }>
-    }> = {}
-
-    upcomingTransactions.forEach(t => {
-      const monthKey = t.scheduledDate.substring(0, 7)
-      const date = new Date(t.scheduledDate + "T00:00:00")
-      const label = `${getMonthName(date.getMonth())} ${date.getFullYear()}`
-
-      if (!months[monthKey]) {
-        months[monthKey] = { label, key: monthKey, transactions: [], byCategory: {} }
-      }
-      months[monthKey].transactions.push(t)
-
-      const cat = getCategory(t.categoryId)
-      const catName = cat?.name || "Sem Categoria"
-      const catColor = cat?.color || "#6b7280"
-      const catIcon = cat?.icon || "Wallet"
-
-      if (!months[monthKey].byCategory[catName]) {
-        months[monthKey].byCategory[catName] = { name: catName, color: catColor, icon: catIcon, transactions: [] }
-      }
-      months[monthKey].byCategory[catName].transactions.push(t)
-    })
-
-    return Object.values(months).sort((a, b) => a.key.localeCompare(b.key))
-  }, [upcomingTransactions, getCategory])
-
-  const totalPendingExpenses = pendingTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0)
-  const totalPendingIncomes = pendingTransactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const getStatusBadge = (scheduledDate: string) => {
-    const date = parseISO(scheduledDate)
-    const diff = differenceInDays(date, today)
-
-    if (isToday(date)) {
-      return <Badge variant="default" className="bg-warning text-warning-foreground">Hoje</Badge>
+    if (day < closingDay) {
+      // Ainda não fechou este mês — janela: mês anterior (dia closingDay+1) até hoje
+      closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
+      closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
+    } else {
+      // Já fechou — janela: mês atual (dia closingDay+1) até próximo fechamento
+      closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
+      closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
     }
-    if (diff < 0) {
-      return <Badge variant="destructive">Atrasado</Badge>
-    }
-    if (diff <= 7) {
-      return <Badge variant="outline">Em {diff} dias</Badge>
-    }
-    return null
+
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+    return { from: fmt(closeFrom), to: fmt(closeTo) }
   }
 
-  const TransactionCard = ({ transaction, showActions = true }: { transaction: ScheduledTransaction; showActions?: boolean }) => {
-    const category = getCategory(transaction.categoryId)
-    return (
-      <Card key={transaction.id} className={transaction.isCompleted ? "opacity-60" : ""}>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {category && (
-              <CategoryIcon icon={category.icon} color={category.color} />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="font-medium truncate">{transaction.description}</p>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-3 w-3 shrink-0" />
-                <span className="truncate">
-                  {format(parseISO(transaction.scheduledDate), "dd 'de' MMMM, yyyy", { locale: ptBR })}
-                </span>
-                {!transaction.isCompleted && getStatusBadge(transaction.scheduledDate)}
-                {transaction.isCompleted && (
-                  <Badge variant="secondary" className="text-xs">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Concluído
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-border">
-            <div className="flex items-center gap-2">
-            <p className={`font-semibold ${transaction.type === "expense" ? "text-destructive" : "text-primary"}`}>
-              {transaction.type === "expense" ? "-" : "+"}{formatCurrency(transaction.amount)}
-            </p>
-            {showActions && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => markAsCompleted(transaction)}
-                  title="Marcar como realizado"
-                  className="text-primary hover:text-primary"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleOpenDialog(transaction)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDeleteId(transaction.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
+  const expenseCategories = data.categories.filter(c => c.type === "expense")
+
+  const cardData = useMemo(() => {
+    return data.creditCards.map(card => {
+      const closingDay = card.closingDay
+      const dueDay = card.dueDay
+      const currentDay = today.getDate()
+
+      let daysToClose = closingDay - currentDay
+      if (daysToClose < 0) daysToClose += 30
+      let daysToDue = dueDay - currentDay
+      if (daysToDue < 0) daysToDue += 30
+
+      // Janela da fatura ativa para este cartão
+      const invoiceWindow = getInvoiceWindow(card.closingDay)
+      const activeMonth = invoiceWindow.to.slice(0, 7)
+
+      // Parcelas da fatura ativa não pagas (pela data da compra na janela)
+      const currentInstallments = data.ccInstallments.filter(i => {
+        if (i.creditCardId !== card.id || i.isPaid) return false
+        const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
+        const purchaseDate = purchase?.purchaseDate ?? i.purchase?.purchaseDate ?? ""
+        return purchaseDate >= invoiceWindow.from && purchaseDate <= invoiceWindow.to
+      })
+      const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
+
+      // Todas as compras do cartão (para listagem)
+      const allInstallments = data.ccInstallments.filter(
+        i => i.creditCardId === card.id && !i.isPaid
+      )
+
+      const isClosed = currentDay >= closingDay
+      const status = invoiceTotal > 0 && daysToDue <= 5 ? "due" :
+                     invoiceTotal > 0 && daysToClose <= 3 ? "closing" : "ok"
+
+      return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }
+    })
+  }, [data.creditCards, data.ccInstallments, currentMonthStr, today])
+
+  async function saveCard() {
+    if (!cardForm.name || !cardForm.limitAmount || !cardForm.dueDay) { toast.error("Preencha todos os campos"); return }
+    const dueDay = parseInt(cardForm.dueDay)
+    const closingDay = dueDay - 7 <= 0 ? dueDay - 7 + 30 : dueDay - 7
+    const payload = { id: editingId || "", name: cardForm.name, limitAmount: parseFloat(cardForm.limitAmount), dueDay, closingDay, color: cardForm.color, isActive: true }
+    if (editingId) await updateCreditCard(payload)
+    else await addCreditCard(payload)
+    setShowCardForm(false); setEditingId(null); setCardForm(emptyCard)
+    toast.success(editingId ? "Cartão atualizado!" : "Cartão adicionado!")
+  }
+
+  async function savePurchase(cardId: string) {
+    const errs: Record<string, string> = {}
+    if (!purchaseForm.description.trim()) errs.description = "Descrição é obrigatória"
+    if (!purchaseForm.amount || parseFloat(purchaseForm.amount) <= 0) errs.amount = "Valor deve ser maior que zero"
+    if (!purchaseForm.categoryId) errs.categoryId = "Selecione uma categoria"
+    if (Object.keys(errs).length > 0) { setPurchaseErrors(errs); return }
+
+    const installments = parseInt(purchaseForm.installments) || 1
+    await addCCPurchase({
+      creditCardId: cardId,
+      description: purchaseForm.description,
+      totalAmount: parseFloat(purchaseForm.amount),
+      installments,
+      categoryId: purchaseForm.categoryId,
+      purchaseDate: purchaseForm.date,
+    }, installments)
+
+    toast.success(installments > 1 ? `${installments}x de ${formatCurrency(parseFloat(purchaseForm.amount)/installments)} registradas!` : "Compra registrada!")
+    setShowPurchaseForm(null)
+    setPurchaseForm({ description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })(), installments: "1" })
+    setPurchaseErrors({})
+  }
+
+  function openPayInvoice(cardId: string, installments: CreditCardInstallment[], total: number, activeMonth: string) {
+    setPayingInvoice({ cardId, month: activeMonth, total, installments })
+  }
+
+  async function confirmPayInvoice() {
+    if (!payingInvoice) return
+    const card = data.creditCards.find(c => c.id === payingInvoice.cardId)
+    await payCCInvoice(payingInvoice.cardId, payingInvoice.month, payingInvoice.total, card?.name)
+    toast.success("Fatura paga!")
+    setPayingInvoice(null)
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Lançamentos Futuros</h2>
-          <p className="text-muted-foreground">Agende receitas e despesas para datas futuras</p>
+          <h1 className="text-2xl font-bold">Cartões de Crédito</h1>
+          <p className="text-muted-foreground">Controle suas compras e faturas</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Novo </span>Lançamento
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingTransaction ? "Editar Lançamento" : "Novo Lançamento Futuro"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select value={type} onValueChange={(v: "income" | "expense") => {
-                  setType(v)
-                  setCategoryId("")
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                    <SelectItem value="income">Receita</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Ex: Pagamento do seguro, Bônus..."
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{isInstallment ? "Valor Total" : "Valor"}</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={isInstallment ? totalAmount : amount}
-                    onChange={(e) => isInstallment ? setTotalAmount(e.target.value) : setAmount(e.target.value)}
-                    placeholder="0,00"
-                  />
-                  {isInstallment && totalAmount && totalInstallments && (
-                    <p className="text-xs text-muted-foreground">
-                      {parseInt(totalInstallments)}x de {(parseFloat(totalAmount) / parseInt(totalInstallments)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                  )}
+        <button onClick={() => setShowCardForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm">
+          <Plus className="h-4 w-4" /> Novo Cartão
+        </button>
+      </div>
+
+      {data.creditCards.length === 0 ? (
+        <div className="bg-card border border-border rounded-xl p-12 text-center">
+          <CardIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="font-medium">Nenhum cartão cadastrado</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cardData.map(({ card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }) => (
+            <div key={card.id} className={`bg-card border rounded-xl shadow-sm overflow-hidden ${
+              status === "due" ? "border-red-300 dark:border-red-800" :
+              status === "closing" ? "border-amber-300 dark:border-amber-800" : "border-border"
+            }`}>
+              {/* Header */}
+              <div className="p-5" style={{ background: `linear-gradient(135deg, ${card.color}22, ${card.color}11)` }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-xl shrink-0" style={{ backgroundColor: card.color }}>
+                      <CardIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-lg truncate">{card.name}</p>
+                      <p className="text-xs text-muted-foreground">Fecha dia {card.closingDay} • Vence dia {card.dueDay}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {status === "due" && <span className="flex items-center gap-1 text-xs text-red-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Vence em {daysToDue}d</span>}
+                    {status === "closing" && <span className="flex items-center gap-1 text-xs text-amber-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Fecha em {daysToClose}d</span>}
+                    <button onClick={() => { setEditingId(card.id); setCardForm({ name: card.name, limitAmount: card.limitAmount.toString(), dueDay: card.dueDay.toString(), color: card.color }); setShowCardForm(true) }}
+                      className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <button onClick={() => setDeleteCardId(card.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Data da 1ª parcela</Label>
-                  <Input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                  />
+
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{isClosed ? "Fatura fechada" : "Fatura atual"}</p>
+                    <p className="text-3xl font-bold">{formatCurrency(invoiceTotal)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{currentInstallments.length} item{currentInstallments.length !== 1 ? "s" : ""} este mês</p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p>Limite: {formatCurrency(card.limitAmount)}</p>
+                    <p>Total pendente: {formatCurrency(allInstallments.reduce((s,i)=>s+i.amount,0))}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
-                          {cat.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Observações (opcional)</Label>
-                <Input
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Adicione notas..."
-                />
+
+                {card.limitAmount > 0 && (
+                  <div className="mt-3 w-full bg-black/20 rounded-full h-1.5">
+                    <div className="h-full rounded-full bg-white/80 transition-all"
+                      style={{ width: `${Math.min((invoiceTotal/card.limitAmount)*100, 100)}%` }} />
+                  </div>
+                )}
               </div>
 
-              {!editingTransaction && (
-                <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <Label className="cursor-pointer">Parcelar?</Label>
-                    <Switch
-                      checked={isInstallment}
-                      onCheckedChange={(checked) => {
-                        setIsInstallment(checked)
-                        if (checked && amount) setTotalAmount(amount)
-                        if (!checked && totalAmount) setAmount(totalAmount)
-                      }}
-                    />
-                  </div>
-                  {isInstallment && (
-                    <div className="space-y-2">
-                      <Label>Número de parcelas</Label>
-                      <Input
-                        type="number"
-                        min="2"
-                        max="360"
-                        value={totalInstallments}
-                        onChange={(e) => setTotalInstallments(e.target.value)}
-                      />
-                    </div>
+              {/* Ações */}
+              <div className="px-4 py-3 border-t border-border flex flex-wrap gap-2">
+                <button onClick={() => setShowPurchaseForm(card.id)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors">
+                  <ShoppingCart className="h-4 w-4" /> Registrar Compra
+                </button>
+                {currentInstallments.length > 0 && (
+                  <button onClick={() => openPayInvoice(card.id, currentInstallments, invoiceTotal, activeMonth)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors">
+                    <CheckCircle2 className="h-4 w-4" /> Pagar Fatura
+                  </button>
+                )}
+                <button onClick={() => setExpandedCard(expandedCard === card.id ? null : card.id)}
+                  className="px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors">
+                  {expandedCard === card.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Lista de parcelas expandida */}
+              {expandedCard === card.id && (
+                <div className="px-4 pb-4 space-y-2">
+                  {allInstallments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhuma compra pendente</p>
+                  ) : (
+                    <>
+                      {/* Agrupar por mês */}
+                      {(Array.from(new Set(allInstallments.map(i => i.dueMonth))).sort() as string[]).map((month: string) => {
+                        const monthInst = allInstallments.filter(i => i.dueMonth === month)
+                        const [y, m] = month.split("-").map(Number)
+                        const label = new Date(y, m-1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+                        return (
+                          <div key={month}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5 capitalize">{label}</p>
+                            {monthInst.map(inst => (
+                              <div key={inst.id} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg mb-1">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">
+                                    {inst.purchase?.description ?? "Compra"}
+                                    {(inst.purchase?.installments ?? 1) > 1 && (
+                                      <span className="text-xs text-muted-foreground ml-1">
+                                        ({inst.installmentNum}/{inst.purchase?.installments})
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <p className="text-sm font-semibold text-red-500">-{formatCurrency(inst.amount)}</p>
+                                  {inst.purchaseId && inst.installmentNum === 1 && (
+                                    <button onClick={() => setDeletePurchaseId(inst.purchaseId)}
+                                      className="p-1 hover:bg-secondary rounded transition-colors">
+                                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })}
+                    </>
                   )}
                 </div>
               )}
-
-              <Button type="submit" className="w-full">
-                {editingTransaction ? "Salvar Alterações" : isInstallment ? `Parcelar em ${totalInstallments}x` : "Agendar Lançamento"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Despesas Pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-destructive">
-              {formatCurrency(totalPendingExpenses)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {pendingTransactions.filter(t => t.type === "expense").length} lançamentos
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Receitas Pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">
-              {formatCurrency(totalPendingIncomes)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {pendingTransactions.filter(t => t.type === "income").length} lançamentos
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {pendingTransactions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CalendarClock className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              Nenhum lançamento futuro agendado.
-              <br />
-              Agende receitas e despesas para controlar melhor suas finanças.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {overdueTransactions.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <h3 className="font-semibold text-lg text-destructive">Atrasados</h3>
-              </div>
-              <div className="space-y-2">
-                {overdueTransactions.map((t) => (
-                  <TransactionCard key={t.id} transaction={t} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {todayTransactions.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3 text-warning">Hoje</h3>
-              <div className="space-y-2">
-                {todayTransactions.map((t) => (
-                  <TransactionCard key={t.id} transaction={t} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {groupedByMonth.map(month => (
-            <div key={month.key}>
-              {/* Header do mês */}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-lg">{month.label}</h3>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="text-red-500">
-                    -{formatCurrency(month.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0))}
-                  </span>
-                  <span className="text-emerald-500">
-                    +{formatCurrency(month.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0))}
-                  </span>
-                </div>
-              </div>
-
-              {/* Agrupado por categoria */}
-              <div className="space-y-3">
-                {Object.values(month.byCategory).sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
-                  <div key={cat.name} className="bg-card border border-border rounded-xl overflow-hidden">
-                    {/* Header da categoria */}
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-secondary/30 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
-                        <span className="text-sm font-semibold">{cat.name}</span>
-                        <span className="text-xs text-muted-foreground">({cat.transactions.length})</span>
-                      </div>
-                      <span className={`text-sm font-semibold ${
-                        cat.transactions[0]?.type === "income"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-600 dark:text-red-400"
-                      }`}>
-                        {cat.transactions[0]?.type === "income" ? "+" : "-"}
-                        {formatCurrency(cat.transactions.reduce((s, t) => s + t.amount, 0))}
-                      </span>
-                    </div>
-                    {/* Transações da categoria */}
-                    <div className="divide-y divide-border">
-                      {cat.transactions.map(t => (
-                        <TransactionCard key={t.id} transaction={t} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           ))}
-
-
         </div>
       )}
-    <DeleteConfirm
-      isOpen={!!deleteId}
-      title="Excluir lançamento?"
-      description="O lançamento será removido permanentemente."
-      onConfirm={() => { deleteId && deleteScheduledTransaction(deleteId); setDeleteId(null) }}
-      onCancel={() => setDeleteId(null)}
-    />
+
+      {/* Modal confirmar pagamento */}
+      {payingInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="font-semibold text-lg">Pagar Fatura</h3>
+            <div className="p-4 bg-secondary/50 rounded-xl">
+              <p className="text-sm text-muted-foreground">Total a pagar</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(payingInvoice.total)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{payingInvoice.installments.length} item(s) em {payingInvoice.month}</p>
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-1.5">
+              {payingInvoice.installments.map(inst => (
+                <div key={inst.id} className="flex justify-between text-sm p-2 bg-secondary/30 rounded-lg">
+                  <span className="truncate mr-2">
+                    {inst.purchase?.description ?? "Compra"}
+                    {(inst.purchase?.installments ?? 1) > 1 && ` (${inst.installmentNum}/${inst.purchase?.installments})`}
+                  </span>
+                  <span className="font-medium shrink-0">{formatCurrency(inst.amount)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Uma transação de despesa será lançada no valor total.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setPayingInvoice(null)}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors">
+                Cancelar
+              </button>
+              <button onClick={confirmPayInvoice}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                Confirmar Pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal registrar compra */}
+      {showPurchaseForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-lg">Registrar Compra</h3>
+              <button onClick={() => setShowPurchaseForm(null)} className="p-1.5 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Descrição</label>
+              <input value={purchaseForm.description}
+                onChange={e => { setPurchaseForm(p => ({ ...p, description: e.target.value })); setPurchaseErrors(p => ({ ...p, description: "" })) }}
+                placeholder="Ex: Supermercado, Netflix..."
+                className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${purchaseErrors.description ? "border-red-400" : "border-border"}`} />
+              {purchaseErrors.description && <p className="text-xs text-red-500 mt-1">{purchaseErrors.description}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
+                <input value={purchaseForm.amount}
+                  onChange={e => { setPurchaseForm(p => ({ ...p, amount: e.target.value })); setPurchaseErrors(p => ({ ...p, amount: "" })) }}
+                  placeholder="0,00" type="number" min="0" step="0.01"
+                  className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${purchaseErrors.amount ? "border-red-400" : "border-border"}`} />
+                {purchaseErrors.amount && <p className="text-xs text-red-500 mt-1">{purchaseErrors.amount}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Parcelas</label>
+                <select value={purchaseForm.installments} onChange={e => setPurchaseForm(p => ({ ...p, installments: e.target.value }))}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                    <option key={n} value={n}>{n}x{n > 1 && purchaseForm.amount ? ` de ${formatCurrency(parseFloat(purchaseForm.amount||"0")/n)}` : ""}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Categoria</label>
+              <select value={purchaseForm.categoryId}
+                onChange={e => { setPurchaseForm(p => ({ ...p, categoryId: e.target.value })); setPurchaseErrors(p => ({ ...p, categoryId: "" })) }}
+                className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${purchaseErrors.categoryId ? "border-red-400" : "border-border"}`}>
+                <option value="">Selecione...</option>
+                {expenseCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+              {purchaseErrors.categoryId && <p className="text-xs text-red-500 mt-1">{purchaseErrors.categoryId}</p>}
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Data da compra</label>
+              <input type="date" value={purchaseForm.date} onChange={e => setPurchaseForm(p => ({ ...p, date: e.target.value }))}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            {parseInt(purchaseForm.installments) > 1 && purchaseForm.amount && (
+              <div className="p-3 bg-primary/5 rounded-lg text-sm text-muted-foreground">
+                {purchaseForm.installments}x de <strong>{formatCurrency(parseFloat(purchaseForm.amount)/parseInt(purchaseForm.installments))}</strong> = Total {formatCurrency(parseFloat(purchaseForm.amount))}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setShowPurchaseForm(null)} className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors">Cancelar</button>
+              <button onClick={() => savePurchase(showPurchaseForm)}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                Registrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal form cartão */}
+      {showCardForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="font-semibold text-lg">{editingId ? "Editar" : "Novo"} Cartão</h3>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Nome</label>
+              <input value={cardForm.name} onChange={e => setCardForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="Ex: Nubank, Itaú..."
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Limite (R$)</label>
+                <input value={cardForm.limitAmount} onChange={e => setCardForm(p => ({ ...p, limitAmount: e.target.value }))}
+                  placeholder="5000" type="number"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Dia vencimento</label>
+                <input value={cardForm.dueDay} onChange={e => setCardForm(p => ({ ...p, dueDay: e.target.value }))}
+                  placeholder="10" type="number" min="1" max="31"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                {cardForm.dueDay && <p className="text-xs text-muted-foreground mt-1">Fecha dia {parseInt(cardForm.dueDay)-7<=0?parseInt(cardForm.dueDay)-7+30:parseInt(cardForm.dueDay)-7}</p>}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Cor</label>
+              <div className="flex gap-2 flex-wrap">
+                {CARD_COLORS.map(color => (
+                  <button key={color} onClick={() => setCardForm(p => ({ ...p, color }))}
+                    className={`w-8 h-8 rounded-full transition-transform ${cardForm.color === color ? "scale-125 ring-2 ring-offset-2 ring-primary" : ""}`}
+                    style={{ backgroundColor: color }} />
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowCardForm(false); setEditingId(null); setCardForm(emptyCard) }}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors">Cancelar</button>
+              <button onClick={saveCard}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                {editingId ? "Salvar" : "Adicionar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <DeleteConfirm isOpen={!!deleteCardId} title="Excluir cartão?"
+        description="O cartão e todas as compras vinculadas serão removidos."
+        onConfirm={() => { deleteCardId && deleteCreditCard(deleteCardId); setDeleteCardId(null) }}
+        onCancel={() => setDeleteCardId(null)} />
+
+      <DeleteConfirm isOpen={!!deletePurchaseId} title="Excluir compra?"
+        description="Todas as parcelas desta compra serão removidas."
+        onConfirm={() => { deletePurchaseId && deleteCCPurchase(deletePurchaseId); setDeletePurchaseId(null) }}
+        onCancel={() => setDeletePurchaseId(null)} />
     </div>
   )
 }
