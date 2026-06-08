@@ -85,15 +85,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         src={`https://www.googletagmanager.com/gtag/js?id=G-CYNBJWSP9J`}
         strategy="afterInteractive"
       />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-CYNBJWSP9J');
-        `}
-      </Script>
       <body className="font-sans antialiased bg-background">
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-CYNBJWSP9J');
+          `}
+        </Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
         </ThemeProvider>
