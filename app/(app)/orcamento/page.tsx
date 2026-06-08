@@ -8,7 +8,7 @@ import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { toast } from "sonner"
 
 export default function OrcamentoPage() {
-  const { data, getCategory, addBudget, deleteBudget } = useFinance()
+  const { data, getCategory, addBudget, deleteBudget, isLoaded } = useFinance()
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth())
   const { year, month } = parseMonth(currentMonth)
   const [showForm, setShowForm] = useState(false)
@@ -65,6 +65,15 @@ export default function OrcamentoPage() {
 
   const availableCategories = expenseCategories.filter(
     c => !monthBudgets.find(b => b.categoryId === c.id)
+  )
+
+  if (!isLoaded) return (
+    <div className="space-y-6">
+      <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+      <div className="space-y-3">
+        {[1,2,3,4].map(i => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}
+      </div>
+    </div>
   )
 
   return (

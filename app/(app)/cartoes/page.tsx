@@ -15,7 +15,7 @@ const CARD_COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f97316","#10b981"
 const emptyCard = { name: "", limitAmount: "", dueDay: "10", color: "#6366f1" }
 
 export default function CartoesPage() {
-  const { data, addCreditCard, updateCreditCard, deleteCreditCard, addCCPurchase, payCCInvoice, deleteCCPurchase } = useFinance()
+  const { data, addCreditCard, updateCreditCard, deleteCreditCard, addCCPurchase, payCCInvoice, deleteCCPurchase, isLoaded } = useFinance()
 
   const [showCardForm, setShowCardForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -142,6 +142,15 @@ export default function CartoesPage() {
     toast.success("Fatura paga!")
     setPayingInvoice(null)
   }
+
+  if (!isLoaded) return (
+    <div className="space-y-6">
+      <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+      <div className="space-y-3">
+        {[1,2,3].map(i => <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />)}
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
