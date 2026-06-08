@@ -59,7 +59,7 @@ export function ExpenseChart({ selectedMonth }: { selectedMonth?: string } = {})
                 ))}
               </Pie>
               <Tooltip formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "0.5rem" }} />
+                contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "0.5rem", color: "var(--foreground)" }} itemStyle={{ color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -176,7 +176,7 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
                 }
                 return [formatCurrency(value), labels[name] ?? name]
               }}
-              contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "0.5rem" }}
+              contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "0.5rem", color: "var(--foreground)" }} itemStyle={{ color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }}
             />
             <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="income" stackId="a" />
             <Bar dataKey="forecastIncome" fill="#10b981" fillOpacity={0.35} radius={[4, 4, 0, 0]} name="forecastIncome" stackId="a" />
