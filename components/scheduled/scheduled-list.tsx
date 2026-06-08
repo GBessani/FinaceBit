@@ -143,6 +143,7 @@ export function ScheduledList() {
       type: transaction.type,
       categoryId: transaction.categoryId,
       date: transaction.scheduledDate,
+      wallet: "digital" as const,
       notes: transaction.notes,
     })
     // Marca como completado

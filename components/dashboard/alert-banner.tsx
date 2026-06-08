@@ -54,6 +54,7 @@ export function AlertBanner() {
               type: "expense",
               categoryId: b.categoryId,
               date: todayStr,
+              wallet: "digital" as const,
               notes: "Pago via alerta do dashboard",
             })
           },
@@ -87,6 +88,7 @@ export function AlertBanner() {
                 type: t.type,
                 categoryId: t.categoryId,
                 date: todayStr,
+                wallet: "digital" as const,
                 notes: t.notes,
               })
             },

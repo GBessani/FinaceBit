@@ -119,6 +119,7 @@ export function FixedBillsList() {
       type: bill.type as "income" | "expense",
       categoryId: bill.categoryId,
       date: today,
+      wallet: "digital" as const,
       notes: `Confirmado de conta fixa`,
     })
   }

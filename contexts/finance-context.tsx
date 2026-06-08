@@ -165,7 +165,7 @@ interface FinanceContextType {
   ccPurchases: CreditCardPurchase[]
   ccInstallments: CreditCardInstallment[]
   addCCPurchase: (purchase: Omit<CreditCardPurchase, "id" | "createdAt">, installments: number) => Promise<void>
-  payCCInvoice: (cardId: string, month: string, totalAmount: number) => Promise<void>
+  payCCInvoice: (cardId: string, month: string, totalAmount: number, cardName?: string) => Promise<void>
   deleteCCPurchase: (purchaseId: string) => Promise<void>
   addBudget: (b: Omit<Budget, "id">) => Promise<void>
   updateBudget: (b: Budget) => Promise<void>
@@ -581,14 +581,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }))
   }, [user, supabase])
 
-  const payCCInvoice = React.useCallback(async (cardId: string, month: string, totalAmount: number) => {
+  const payCCInvoice = React.useCallback(async (cardId: string, month: string, totalAmount: number, cardName?: string) => {
     if (!user) return
     const userId = targetUserIdRef.current || user.id
 
     // Create transaction for total
     const { data: txRow } = await supabase.from("transactions").insert({
       user_id: userId,
-      description: `Fatura cartão`,
+      description: cardName ? `Fatura ${cardName}` : `Fatura cartão`,
       amount: totalAmount,
       type: "expense",
       category_id: null,
