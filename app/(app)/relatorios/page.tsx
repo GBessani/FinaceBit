@@ -324,7 +324,10 @@ export default function RelatoriosPage() {
                   backgroundColor: "var(--card)",
                   border: "1px solid var(--border)",
                   borderRadius: "0.5rem",
+                  color: "var(--foreground)",
                 }}
+                itemStyle={{ color: "var(--foreground)" }}
+                labelStyle={{ color: "var(--foreground)" }}
               />
               <Area type="monotone" dataKey="balance" stroke="#10b981" fillOpacity={1} fill="url(#colorBalance)" name="Saldo" />
             </AreaChart>
@@ -358,7 +361,10 @@ export default function RelatoriosPage() {
                     backgroundColor: "var(--card)",
                     border: "1px solid var(--border)",
                     borderRadius: "0.5rem",
+                    color: "var(--foreground)",
                   }}
+                  itemStyle={{ color: "var(--foreground)" }}
+                  labelStyle={{ color: "var(--foreground)" }}
                 />
                 <Area
                   type="monotone"
@@ -405,7 +411,10 @@ export default function RelatoriosPage() {
                         backgroundColor: "var(--card)",
                         border: "1px solid var(--border)",
                         borderRadius: "0.5rem",
+                        color: "var(--foreground)",
                       }}
+                      itemStyle={{ color: "var(--foreground)" }}
+                      labelStyle={{ color: "var(--foreground)" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
