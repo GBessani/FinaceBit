@@ -11,7 +11,7 @@ import { CalendarClock, RefreshCw, AlertCircle, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export function UpcomingOverview() {
-  const { data, getCategory, getUpcomingBills, getUpcomingScheduled } = useFinance()
+  const { data, getCategory, getUpcomingBills } = useFinance()
 
   const upcomingBills = getUpcomingBills().slice(0, 3)
   const today = new Date()

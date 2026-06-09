@@ -2,7 +2,7 @@
 
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { CategoryIcon } from "@/components/category-icon"
+import { CategoryIcon } from "@/components/categories/category-icon"
 import { ArrowUpRight, ArrowDownRight, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
