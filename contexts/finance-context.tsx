@@ -294,6 +294,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = React.useCallback(async (t: Transaction) => {
     if (!user) return
+    console.log('addTransaction called with status:', t.status, 'date:', t.date)
     const { data: row, error } = await supabase.from("transactions").insert({
       user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
