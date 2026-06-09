@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth } from "@/lib/utils"
@@ -21,11 +21,35 @@ export function TransactionsList() {
   const { data, addTransaction, updateTransaction, deleteTransaction, confirmTransaction, getCategory, isLoaded } = useFinance()
   const [activeTab, setActiveTab] = useState<Tab>("completed")
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState<"all" | TransactionType>("all")
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowMonthPicker(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>()
+    data.transactions.forEach(t => months.add(t.date.substring(0, 7)))
+    // Add current and next 3 months
+    for (let i = -1; i <= 3; i++) {
+      const d = new Date()
+      d.setMonth(d.getMonth() + i)
+      months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
+    }
+    return Array.from(months).sort().reverse()
+  }, [data.transactions])
 
   const today = startOfDay(new Date())
   const todayStr = (() => {
@@ -172,27 +196,31 @@ export function TransactionsList() {
   return (
     <div className="space-y-4">
       {/* Month selector */}
-      <div className="flex items-center justify-between gap-2">
-        <button onClick={() => {
-          const base = selectedMonth ?? getCurrentMonth()
-          const { year, month } = parseMonth(base)
-          const d = new Date(year, month - 2, 1)
-          setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
-        }} className="p-2 hover:bg-secondary rounded-lg transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      <div className="relative" ref={pickerRef}>
+        <button onClick={() => setShowMonthPicker(p => !p)}
+          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border font-medium text-sm transition-colors ${showMonthPicker ? "border-primary bg-primary/5" : "border-border hover:bg-secondary"}`}>
+          <span>{selectedMonth ? `${getMonthName(parseMonth(selectedMonth).month)} ${parseMonth(selectedMonth).year}` : "📅 Todos os meses"}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-muted-foreground transition-transform ${showMonthPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </button>
-        <button onClick={() => setSelectedMonth(null)}
-          className={`flex-1 text-center font-semibold text-sm py-1.5 rounded-lg transition-colors ${!selectedMonth ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}>
-          {selectedMonth ? `${getMonthName(parseMonth(selectedMonth).month)} ${parseMonth(selectedMonth).year}` : "Todos os meses"}
-        </button>
-        <button onClick={() => {
-          const base = selectedMonth ?? getCurrentMonth()
-          const { year, month } = parseMonth(base)
-          const d = new Date(year, month, 1)
-          setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
-        }} className="p-2 hover:bg-secondary rounded-lg transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-        </button>
+        {showMonthPicker && (
+          <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+            <button onClick={() => { setSelectedMonth(null); setShowMonthPicker(false) }}
+              className={`w-full px-4 py-2.5 text-left text-sm hover:bg-secondary transition-colors ${!selectedMonth ? "bg-primary/10 text-primary font-medium" : ""}`}>
+              Todos os meses
+            </button>
+            <div className="max-h-64 overflow-y-auto">
+              {availableMonths.map(m => {
+                const { year, month } = parseMonth(m)
+                return (
+                  <button key={m} onClick={() => { setSelectedMonth(m); setShowMonthPicker(false) }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-secondary transition-colors ${selectedMonth === m ? "bg-primary/10 text-primary font-medium" : ""}`}>
+                    {getMonthName(month)} {year}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Header */}
