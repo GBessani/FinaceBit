@@ -177,9 +177,9 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Ícone</label>
-            <div className="grid grid-cols-8 gap-2">
+            <div>
               {/* Toggle ícones/emojis */}
-              <div className="col-span-full flex gap-1 p-1 bg-secondary rounded-lg mb-1">
+              <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-2">
                 <button type="button" onClick={() => setIconMode("icons")}
                   className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "icons" ? "bg-card shadow" : "text-muted-foreground"}`}>
                   🎨 Ícones
@@ -189,18 +189,21 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
                   😀 Emojis
                 </button>
               </div>
-
-              {iconMode === "icons" ? availableIcons.map((iconName) => (
-                <button key={iconName} type="button" onClick={() => setIcon(iconName)}
-                  className={`p-2 rounded-lg border transition-colors ${icon === iconName ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                  <CategoryIcon icon={iconName} size={18} />
-                </button>
-              )) : availableEmojis.map((emoji: string) => (
-                <button key={emoji} type="button" onClick={() => setIcon(emoji)}
-                  className={`p-2 rounded-lg border text-lg transition-colors ${icon === emoji ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                  {emoji}
-                </button>
-              ))}
+              <div className="max-h-48 overflow-y-auto pr-1">
+                <div className="grid grid-cols-8 gap-2">
+                  {iconMode === "icons" ? availableIcons.map((iconName) => (
+                    <button key={iconName} type="button" onClick={() => setIcon(iconName)}
+                      className={`p-2 rounded-lg border transition-colors ${icon === iconName ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
+                      <CategoryIcon icon={iconName} size={18} />
+                    </button>
+                  )) : availableEmojis.map((emoji: string) => (
+                    <button key={emoji} type="button" onClick={() => setIcon(emoji)}
+                      className={`p-2 rounded-lg border text-lg transition-colors ${icon === emoji ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
