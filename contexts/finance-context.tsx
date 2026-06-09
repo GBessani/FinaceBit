@@ -35,10 +35,15 @@ function mapTransaction(row: Record<string, unknown>): Transaction {
     id: row.id as string,
     description: row.description as string,
     amount: Number(row.amount),
-    type: row.type as "income" | "expense",
+    type: row.type as "income" | "expense" | "transfer",
     categoryId: (row.category_id as string) ?? "",
     date: (row.date as string).substring(0, 10),
     notes: row.notes as string | undefined,
+    wallet: (row.wallet as "digital" | "cash") ?? "digital",
+    status: (row.status as "pending" | "completed") ?? "completed",
+    installmentNumber: row.installment_number as number | undefined,
+    totalInstallments: row.total_installments as number | undefined,
+    installmentGroupId: row.installment_group_id as string | undefined,
   }
 }
 
@@ -294,7 +299,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = React.useCallback(async (t: Transaction) => {
     if (!user) return
-    console.log('addTransaction called with status:', t.status, 'date:', t.date)
     const { data: row, error } = await supabase.from("transactions").insert({
       user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
