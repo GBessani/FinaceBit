@@ -311,6 +311,20 @@ function TransactionForm({ onClose, onSubmit }: TransactionFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Carteira */}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button"
+              onClick={() => setForm(p => ({ ...p, wallet: "digital" }))}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${form.wallet === "digital" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-secondary text-muted-foreground"}`}>
+              🏦 Conta Digital
+            </button>
+            <button type="button"
+              onClick={() => setForm(p => ({ ...p, wallet: "cash" }))}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${form.wallet === "cash" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-secondary text-muted-foreground"}`}>
+              💵 Dinheiro Físico
+            </button>
+          </div>
+
           <div className="flex gap-2 p-1 bg-secondary rounded-lg">
             <button
               type="button"
