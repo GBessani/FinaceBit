@@ -114,7 +114,7 @@ export default function PerfilPage() {
       setCustomAvatar(publicUrl)
       toast.success("Foto atualizada!")
     } catch (err) {
-      console.error(err)
+      console.error("Avatar upload error:", err)
       toast.error("Erro ao fazer upload. Tente novamente.")
     } finally {
       setUploading(false)

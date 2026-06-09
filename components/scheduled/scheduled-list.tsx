@@ -104,7 +104,7 @@ export function ScheduledList() {
     } else if (isInstallment && totalInstallments) {
       const total = parseInt(totalInstallments)
       for (let i = 0; i < total; i++) {
-        const date = new Date(scheduledDate)
+        const date = parseISO(scheduledDate)
         date.setMonth(date.getMonth() + i)
         await addScheduledTransaction({
           id: "",
