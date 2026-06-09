@@ -98,7 +98,7 @@ export function TransactionsList() {
 
     const installments = parseInt(form.installments) || 1
     const groupId = installments > 1 ? crypto.randomUUID() : undefined
-    const status = form.date > todayStr ? "pending" : form.status
+    const status: "pending" | "completed" = form.date > todayStr ? "pending" : "completed"
 
     if (editingTx) {
       await updateTransaction({ ...editingTx, ...form, amount: parseFloat(form.amount), status })
@@ -110,7 +110,7 @@ export function TransactionsList() {
         const instDate = new Date(y, m - 1 + (i - 1), d)
         const instDateStr = `${instDate.getFullYear()}-${String(instDate.getMonth()+1).padStart(2,"0")}-${String(instDate.getDate()).padStart(2,"0")}`
         // Each installment is 1 month apart from the previous, starting from purchase date
-        const instStatus = instDateStr > todayStr ? "pending" : "completed"
+        const instStatus: "pending" | "completed" = instDateStr > todayStr ? "pending" : "completed"
         await addTransaction({
           id: crypto.randomUUID(),
           description: `${form.description} (${i}/${installments})`,
