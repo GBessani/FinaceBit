@@ -174,8 +174,8 @@ export function TransactionsList() {
       {/* Month selector */}
       <div className="flex items-center justify-between gap-2">
         <button onClick={() => {
-          if (!selectedMonth) return
-          const { year, month } = parseMonth(selectedMonth)
+          const base = selectedMonth ?? getCurrentMonth()
+          const { year, month } = parseMonth(base)
           const d = new Date(year, month - 2, 1)
           setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
         }} className="p-2 hover:bg-secondary rounded-lg transition-colors">
