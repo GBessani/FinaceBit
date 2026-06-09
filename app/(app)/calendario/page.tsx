@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, Circle } from "lucide-react"
+import { ChevronLeft, ChevronRight} from "lucide-react"
 import { parseISO, isSameDay, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
