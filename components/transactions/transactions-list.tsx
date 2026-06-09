@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
-import { formatCurrency, generateId } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -94,7 +94,7 @@ export function TransactionsList() {
     }
 
     const installments = parseInt(form.installments) || 1
-    const groupId = installments > 1 ? generateId() : undefined
+    const groupId = installments > 1 ? crypto.randomUUID() : undefined
     const status = form.date > todayStr ? "pending" : form.status
 
     if (editingTx) {
@@ -108,7 +108,7 @@ export function TransactionsList() {
         const instDateStr = `${instDate.getFullYear()}-${String(instDate.getMonth()+1).padStart(2,"0")}-${String(instDate.getDate()).padStart(2,"0")}`
         const instStatus = instDateStr > todayStr ? "pending" : "completed"
         await addTransaction({
-          id: generateId(),
+          id: crypto.randomUUID(),
           description: `${form.description} (${i}/${installments})`,
           amount: Math.round((parseFloat(form.amount) / installments) * 100) / 100,
           type: form.type,
@@ -125,7 +125,7 @@ export function TransactionsList() {
       toast.success(`${installments}x de ${formatCurrency(parseFloat(form.amount)/installments)} criadas!`)
     } else {
       await addTransaction({
-        id: generateId(),
+        id: crypto.randomUUID(),
         description: form.description,
         amount: parseFloat(form.amount),
         type: form.type,
