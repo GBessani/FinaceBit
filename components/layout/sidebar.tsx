@@ -40,6 +40,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { isConsultant } = useConsultant()
   const [isOpen, setIsOpen] = useState(false)
   const { user, signOut } = useFinance()
   const router = useRouter()
@@ -87,7 +88,7 @@ export function Sidebar() {
           </div>
 
           <nav className="flex-1 space-y-1">
-            {navItems.map((item) => {
+            {navItems.filter(item => !item.consultantOnly || isConsultant).map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
