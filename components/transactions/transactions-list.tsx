@@ -10,7 +10,7 @@ import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
   TrendingUp, TrendingDown, ArrowLeftRight, Search, Filter
 } from "lucide-react"
-import { CategoryIcon } from "@/components/category-icon"
+import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { toast } from "sonner"
 
