@@ -49,8 +49,9 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
 
   // Saldo total acumulado desde o início (todas as transações)
   const totalBalance = useMemo(() => {
-    const allIncome = data.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
-    const allExpenses = data.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+    const completed = data.transactions.filter(t => t.status !== "pending")
+    const allIncome = completed.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
+    const allExpenses = completed.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
     return (initialBalance ?? 0) + allIncome - allExpenses
   }, [data.transactions, initialBalance])
 
@@ -58,7 +59,7 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
   const walletBalances = useMemo(() => {
     let digital = initialBalance ?? 0
     let cash = 0
-    data.transactions.forEach(t => {
+    data.transactions.filter(t => t.status !== "pending").forEach(t => {
       if (t.type === "transfer") {
         // Transferência: detecta direção pelo description
         if (t.description.includes("Conta Digital → Dinheiro Físico") || t.description.includes("Conta Digital →")) {

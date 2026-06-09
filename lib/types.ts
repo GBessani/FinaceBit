@@ -50,21 +50,6 @@ export interface FixedBill {
   startDate?: string          // data da primeira parcela (YYYY-MM-DD)
 }
 
-export interface ScheduledTransaction {
-  id: string
-  description: string
-  amount: number
-  type: TransactionType
-  categoryId: string
-  scheduledDate: string
-  isCompleted: boolean
-  notes?: string
-  fixedBillId?: string
-  installmentNumber?: number
-  creditCardId?: string   // se for compra no cartão
-  totalInstallments?: number // total de parcelas
-}
-
 export interface FinancialData {
   investments: Investment[]
   creditCards: CreditCard[]
@@ -74,7 +59,6 @@ export interface FinancialData {
   categories: Category[]
   goals: Goal[]
   fixedBills: FixedBill[]
-  scheduledTransactions: ScheduledTransaction[]
   ccPurchases: CreditCardPurchase[]
   ccInstallments: CreditCardInstallment[]
 }

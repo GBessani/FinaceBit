@@ -9,7 +9,6 @@ import {
   Category,
   Goal,
   FixedBill,
-  ScheduledTransaction,
   Investment,
   CreditCard,
   InvestmentTransaction,
@@ -75,23 +74,6 @@ function mapFixedBill(row: Record<string, unknown>): FixedBill {
   }
 }
 
-function mapScheduledTransaction(row: Record<string, unknown>): ScheduledTransaction {
-  return {
-    id: row.id as string,
-    description: row.description as string,
-    amount: Number(row.amount),
-    type: row.type as "income" | "expense",
-    categoryId: (row.category_id as string) ?? "",
-    scheduledDate: (row.scheduled_date as string).substring(0, 10),
-    isCompleted: row.is_completed as boolean,
-    notes: row.notes as string | undefined,
-    fixedBillId: row.fixed_bill_id as string | undefined,
-    installmentNumber: row.installment_number as number | undefined,
-    creditCardId: row.credit_card_id as string | undefined,
-    totalInstallments: row.total_installments as number | undefined,
-  }
-}
-
 function mapCreditCard(row: Record<string, unknown>): CreditCard {
   return {
     id: row.id as string,
@@ -153,15 +135,12 @@ interface FinanceContextType {
   addFixedBill: (bill: FixedBill) => Promise<void>
   updateFixedBill: (bill: FixedBill) => Promise<void>
   deleteFixedBill: (id: string) => Promise<void>
-  addScheduledTransaction: (transaction: ScheduledTransaction) => Promise<void>
-  updateScheduledTransaction: (transaction: ScheduledTransaction) => Promise<void>
-  deleteScheduledTransaction: (id: string) => Promise<void>
+
   getCategory: (id: string) => Category | undefined
   getTotalIncome: (month?: string) => number
   getTotalExpenses: (month?: string) => number
   getBalance: (month?: string) => number
   getUpcomingBills: () => FixedBill[]
-  getUpcomingScheduled: () => ScheduledTransaction[]
   addInvestment: (investment: Investment) => Promise<void>
   updateInvestment: (investment: Investment) => Promise<void>
   deleteInvestment: (id: string) => Promise<void>
@@ -199,7 +178,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     categories: [],
     goals: [],
     fixedBills: [],
-    scheduledTransactions: [],
     investments: [],
     creditCards: [],
     investmentTransactions: [],
@@ -211,12 +189,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [initialBalance, setInitialBalanceState] = React.useState(0)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, scheduled, invs, cards, invTxs, budgets, ccPurchases, ccInstallments] = await Promise.all([
+    const [cats, txs, goals, bills, invs, cards, invTxs, budgets, ccPurchases, ccInstallments] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("fixed_bills").select("*").eq("user_id", userId).order("created_at"),
-      supabase.from("scheduled_transactions").select("*").eq("user_id", userId).order("scheduled_date"),
       supabase.from("investments").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("credit_cards").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("investment_transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
@@ -230,7 +207,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       transactions: (txs.data ?? []).map(mapTransaction),
       goals: (goals.data ?? []).map(mapGoal),
       fixedBills: (bills.data ?? []).map(mapFixedBill),
-      scheduledTransactions: (scheduled.data ?? []).map(mapScheduledTransaction),
       investments: (invs.data ?? []).map(mapInvestment),
       creditCards: (cards.data ?? []).map(mapCreditCard),
       investmentTransactions: (invTxs.data ?? []).map(mapInvestmentTransaction),
@@ -410,7 +386,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setData(prev => ({
           ...prev,
           fixedBills: [...prev.fixedBills, newBill],
-          scheduledTransactions: [...prev.scheduledTransactions, ...(scheduled ?? []).map(mapScheduledTransaction)],
         }))
       } else {
         setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
@@ -435,45 +410,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     toast.success("Conta fixa removida!")
   }, [supabase])
 
-  const addScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
-    if (!user) return
-    const { data: row } = await supabase.from("scheduled_transactions").insert({
-      user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount, type: t.type,
-      category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
-      is_completed: t.isCompleted, notes: t.notes ?? null,
-      credit_card_id: t.creditCardId ?? null,
-      installment_number: t.installmentNumber ?? null,
-      total_installments: t.totalInstallments ?? null,
-    }).select().single()
-    if (row) setData(prev => ({ ...prev, scheduledTransactions: [...prev.scheduledTransactions, mapScheduledTransaction(row)] }))
-  }, [user, supabase])
-
-  const updateScheduledTransaction = React.useCallback(async (t: ScheduledTransaction) => {
-    const { data: row } = await supabase.from("scheduled_transactions").update({
-      description: t.description, amount: t.amount, type: t.type,
-      category_id: t.categoryId || null, scheduled_date: t.scheduledDate,
-      is_completed: t.isCompleted, notes: t.notes ?? null,
-      credit_card_id: t.creditCardId ?? null,
-    }).eq("id", t.id).select().single()
-    if (row) setData(prev => ({ ...prev, scheduledTransactions: prev.scheduledTransactions.map(x => x.id === t.id ? mapScheduledTransaction(row) : x) }))
-  }, [supabase])
-
-  const deleteScheduledTransaction = React.useCallback(async (id: string) => {
-    await supabase.from("scheduled_transactions").delete().eq("id", id)
-    setData(prev => ({ ...prev, scheduledTransactions: prev.scheduledTransactions.filter(t => t.id !== id) }))
-  }, [supabase])
-
   const getCategory = React.useCallback((id: string) => data.categories.find(c => c.id === id), [data.categories])
 
   const getTotalIncome = React.useCallback((month?: string) =>
     data.transactions
-      .filter(t => t.type === "income" && (!month || t.date.startsWith(month)))
+      .filter(t => t.type === "income" && t.status !== "pending" && (!month || t.date.startsWith(month)))
       .reduce((s, t) => s + t.amount, 0)
   , [data.transactions])
 
   const getTotalExpenses = React.useCallback((month?: string) =>
     data.transactions
-      .filter(t => t.type === "expense" && (!month || t.date.startsWith(month)))
+      .filter(t => t.type === "expense" && t.status !== "pending" && (!month || t.date.startsWith(month)))
       .reduce((s, t) => s + t.amount, 0)
   , [data.transactions])
 
@@ -488,12 +435,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= 7
     })
   }, [data.fixedBills])
-
-  const getUpcomingScheduled = React.useCallback(() => {
-    const today = new Date().toISOString().split("T")[0]
-    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]
-    return data.scheduledTransactions.filter(t => !t.isCompleted && t.scheduledDate >= today && t.scheduledDate <= nextWeek)
-  }, [data.scheduledTransactions])
 
 
   const addInvestment = React.useCallback(async (inv: Investment) => {
@@ -754,9 +695,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       addCategory, deleteCategory,
       addGoal, updateGoal, deleteGoal,
       addFixedBill, updateFixedBill, deleteFixedBill,
-      addScheduledTransaction, updateScheduledTransaction, deleteScheduledTransaction,
       getCategory, getTotalIncome, getTotalExpenses, getBalance,
-      getUpcomingBills, getUpcomingScheduled, signOut,
+      getUpcomingBills, signOut,
       initialBalance, setInitialBalance,
       creditCards: data.creditCards,
       budgets: data.budgets ?? [],
