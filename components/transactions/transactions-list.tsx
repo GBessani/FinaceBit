@@ -27,7 +27,10 @@ export function TransactionsList() {
   const [filterType, setFilterType] = useState<"all" | TransactionType>("all")
 
   const today = startOfDay(new Date())
-  const todayStr = today.toISOString().split("T")[0]
+  const todayStr = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+  })()
 
   // Classify transactions
   const { pending, overdue, completed } = useMemo(() => {
@@ -106,6 +109,7 @@ export function TransactionsList() {
         const [y, m, d] = form.date.split("-").map(Number)
         const instDate = new Date(y, m - 1 + (i - 1), d)
         const instDateStr = `${instDate.getFullYear()}-${String(instDate.getMonth()+1).padStart(2,"0")}-${String(instDate.getDate()).padStart(2,"0")}`
+        // Each installment is 1 month apart from the previous, starting from purchase date
         const instStatus = instDateStr > todayStr ? "pending" : "completed"
         await addTransaction({
           id: crypto.randomUUID(),
