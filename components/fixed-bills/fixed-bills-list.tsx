@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { CategoryIcon } from "@/components/category-icon"
+import { CategoryIcon } from "@/components/categories/category-icon"
 import { formatCurrency } from "@/lib/utils"
 import { Plus, Trash2, Edit, RefreshCw, Calendar, Pause, Play, CheckCircle } from "lucide-react"
 

@@ -3,7 +3,7 @@
 import { useFinance } from "@/contexts/finance-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CategoryIcon } from "@/components/category-icon"
+import { CategoryIcon } from "@/components/categories/category-icon"
 import { formatCurrency } from "@/lib/utils"
 import { format, parseISO, differenceInDays, isToday, isBefore } from "date-fns"
 import { ptBR } from "date-fns/locale"
