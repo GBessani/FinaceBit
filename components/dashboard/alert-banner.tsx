@@ -8,7 +8,7 @@ import { differenceInDays, parseISO, isToday, isBefore } from "date-fns"
 import Link from "next/link"
 
 export function AlertBanner() {
-  const { data, addTransaction, updateScheduledTransaction, getCategory } = useFinance()
+  const { data, addTransaction, confirmTransaction, getCategory } = useFinance()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [paying, setPaying] = useState<string | null>(null)
   const today = new Date()
@@ -63,10 +63,10 @@ export function AlertBanner() {
     })
 
     // Lançamentos futuros de despesa atrasados ou de hoje
-    data.scheduledTransactions
-      .filter(t => !t.isCompleted && t.type === "expense")
+    data.transactions.filter(t => t.status === "pending")
+      .filter(t => t.type === "expense")
       .forEach(t => {
-        const date = parseISO(t.scheduledDate)
+        const date = parseISO(t.date)
         const isOverdue = isBefore(date, today) && !isToday(date)
         const isScheduledToday = isToday(date)
 
@@ -78,26 +78,16 @@ export function AlertBanner() {
             message: isScheduledToday
               ? `"${t.description}" agendado para hoje — ${formatCurrency(t.amount)}`
               : `"${t.description}" atrasado há ${days} dia${days > 1 ? "s" : ""} — ${formatCurrency(t.amount)}`,
-            link: "/lancamentos-futuros",
+            link: "/transacoes",
             action: async () => {
-              await updateScheduledTransaction({ ...t, isCompleted: true })
-              await addTransaction({
-                id: "",
-                description: t.description,
-                amount: t.amount,
-                type: t.type,
-                categoryId: t.categoryId,
-                date: todayStr,
-                wallet: "digital" as const,
-                notes: t.notes,
-              })
+              await confirmTransaction(t.id)
             },
           })
         }
       })
 
     return result.filter(a => !dismissed.includes(a.id))
-  }, [data.fixedBills, data.scheduledTransactions, data.transactions, dismissed, today, todayStr, addTransaction, updateScheduledTransaction])
+  }, [data.fixedBills, data.transactions.filter(t => t.status === "pending"), data.transactions, dismissed, today, todayStr, addTransaction, confirmTransaction])
 
   if (alerts.length === 0) return null
 
