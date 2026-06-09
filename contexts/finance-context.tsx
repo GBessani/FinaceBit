@@ -137,6 +137,7 @@ interface FinanceContextType {
   isLoaded: boolean
   user: User | null
   addTransaction: (transaction: Transaction) => Promise<void>
+  confirmTransaction: (id: string) => Promise<void>
   updateTransaction: (transaction: Transaction) => Promise<void>
   deleteTransaction: (id: string) => Promise<void>
   addCategory: (category: Category) => Promise<void>
@@ -297,6 +298,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       user_id: targetUserIdRef.current || user!.id, description: t.description, amount: t.amount,
       type: t.type, category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
       wallet: t.wallet ?? "digital",
+      status: t.status ?? "completed",
+      installment_number: t.installmentNumber ?? null,
+      total_installments: t.totalInstallments ?? null,
+      installment_group_id: t.installmentGroupId ?? null,
     }).select().single()
     if (error) { toast.error("Erro ao salvar transação."); return }
     if (row) {
@@ -310,6 +315,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       description: t.description, amount: t.amount, type: t.type,
       category_id: t.categoryId || null, date: t.date, notes: t.notes ?? null,
       wallet: t.wallet ?? "digital",
+      status: t.status ?? "completed",
     }).eq("id", t.id).select().single()
     if (row) setData(prev => ({ ...prev, transactions: prev.transactions.map(x => x.id === t.id ? mapTransaction(row) : x) }))
   }, [supabase])
@@ -632,6 +638,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }))
   }, [supabase])
 
+  const confirmTransaction = React.useCallback(async (id: string) => {
+    await supabase.from("transactions").update({ status: "completed" }).eq("id", id)
+    setData(prev => ({
+      ...prev,
+      transactions: prev.transactions.map(t => t.id === id ? { ...t, status: "completed" as const } : t)
+    }))
+  }, [supabase])
+
   const addBudget = React.useCallback(async (b: Omit<Budget, "id">) => {
     if (!user) return
     const { data: row } = await supabase.from("budgets").upsert({
@@ -731,7 +745,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   return (
     <FinanceContext.Provider value={{
       data, isLoaded, user,
-      addTransaction, updateTransaction, deleteTransaction,
+      addTransaction, updateTransaction, deleteTransaction, confirmTransaction,
       addCategory, deleteCategory,
       addGoal, updateGoal, deleteGoal,
       addFixedBill, updateFixedBill, deleteFixedBill,

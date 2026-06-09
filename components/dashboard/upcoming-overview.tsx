@@ -16,9 +16,9 @@ export function UpcomingOverview() {
   const upcomingBills = getUpcomingBills().slice(0, 3)
   const today = new Date()
 
-  const upcomingScheduled = data.scheduledTransactions
-    .filter((t) => !t.isCompleted)
-    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
+  const upcomingScheduled = data.transactions.filter(t => t.status === "pending")
+    
+    .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3)
 
   const getDaysUntilDue = (dueDay: number) => {
@@ -117,7 +117,7 @@ export function UpcomingOverview() {
             Próximos Lançamentos
           </CardTitle>
           <Link
-            href="/lancamentos-futuros"
+            href="/transacoes"
             className="text-sm text-primary hover:underline flex items-center gap-1"
           >
             Ver todos <ArrowRight className="h-3 w-3" />
@@ -127,13 +127,13 @@ export function UpcomingOverview() {
           {upcomingScheduled.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-sm text-muted-foreground">Nenhum lançamento nos próximos 7 dias</p>
-              <a href="/lancamentos-futuros" className="text-xs text-primary hover:underline mt-1 inline-block">Agendar lançamento →</a>
+              <a href="/transacoes" className="text-xs text-primary hover:underline mt-1 inline-block">Agendar lançamento →</a>
             </div>
           ) : (
             <div className="space-y-3">
               {upcomingScheduled.map((transaction) => {
                 const category = getCategory(transaction.categoryId)
-                const status = getScheduledStatus(transaction.scheduledDate)
+                const status = getScheduledStatus(transaction.date)
                 return (
                   <div key={transaction.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -143,7 +143,7 @@ export function UpcomingOverview() {
                       <div>
                         <p className="text-sm font-medium">{transaction.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(transaction.scheduledDate), "dd MMM", { locale: ptBR })}
+                          {format(parseISO(transaction.date), "dd MMM", { locale: ptBR })}
                         </p>
                       </div>
                     </div>

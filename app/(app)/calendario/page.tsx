@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency } from "@/lib/utils"
-import { ChevronLeft, ChevronRight} from "lucide-react"
+import { ChevronLeft, ChevronRight, Circle } from "lucide-react"
 import { parseISO, isSameDay, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -57,8 +57,8 @@ export default function CalendarioPage() {
     })
 
     // Lançamentos futuros
-    data.scheduledTransactions.filter(t => !t.isCompleted).forEach(t => {
-      const d = t.scheduledDate.slice(0, 10)
+    data.transactions.filter(t => t.status === "pending").forEach(t => {
+      const d = t.date.slice(0, 10)
       addEvent(d, "scheduled", `${t.description} (agendado)`, t.amount, "#8b5cf6")
     })
 

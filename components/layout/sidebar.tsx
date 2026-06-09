@@ -15,7 +15,6 @@ import {
   PiggyBank,
   Users,
   RefreshCw,
-  CalendarClock,
   LogOut,
   TrendingUp,
   CreditCard,
@@ -28,7 +27,6 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transacoes", label: "Transações", icon: ArrowLeftRight },
-  { href: "/lancamentos-futuros", label: "Lançamentos Futuros", icon: CalendarClock },
   { href: "/calendario", label: "Calendário", icon: Calendar },
   { href: "/contas-fixas", label: "Contas Fixas", icon: RefreshCw },
   { href: "/cartoes", label: "Cartões de Crédito", icon: CreditCard },

@@ -109,7 +109,7 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
     // Meses com movimento real
     const monthsWithMovement = new Set([
       ...data.transactions.map(t => t.date.substring(0, 7)),
-      ...data.scheduledTransactions.filter(t => t.isCompleted).map(t => t.scheduledDate.substring(0, 7)),
+      ...data.transactions.filter(t => t.status === "completed").map(t => t.date.substring(0, 7)),
     ])
 
     // Transações manuais
@@ -130,15 +130,15 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
     })
 
     // Lançamentos futuros NÃO concluídos → somam na previsão
-    data.scheduledTransactions.filter(t => !t.isCompleted).forEach(t => {
-      const key = t.scheduledDate.substring(0, 7)
+    data.transactions.filter(t => t.status === "pending").forEach(t => {
+      const key = t.date.substring(0, 7)
       if (!months[key]) return
       if (t.type === "income") months[key].forecastIncome += t.amount
       else months[key].forecastExpense += t.amount
     })
 
     return Object.values(months)
-  }, [data.transactions, data.fixedBills, data.scheduledTransactions])
+  }, [data.transactions, data.fixedBills])
 
   const hasForecast = monthlyData.some(m => m.forecastIncome > 0 || m.forecastExpense > 0)
 

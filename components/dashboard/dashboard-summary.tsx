@@ -28,20 +28,20 @@ export function DashboardSummary({ selectedMonth: selectedMonthProp, onMonthChan
   const forecastIncome = useMemo(() => {
     if (!isFutureMonth) return null
     const fixed = data.fixedBills.filter(b => b.isActive && b.type === "income").reduce((s, b) => s + b.amount, 0)
-    const scheduled = data.scheduledTransactions
-      .filter(t => !t.isCompleted && t.type === "income" && t.scheduledDate.startsWith(currentMonth))
+    const scheduled = data.transactions.filter(t => t.status === "pending")
+      .filter(t => t.type === "income" && t.date.startsWith(currentMonth))
       .reduce((s, t) => s + t.amount, 0)
     return fixed + scheduled
-  }, [isFutureMonth, data.fixedBills, data.scheduledTransactions, currentMonth])
+  }, [isFutureMonth, data.fixedBills, data.transactions, currentMonth])
 
   const forecastExpenses = useMemo(() => {
     if (!isFutureMonth) return null
     const fixed = data.fixedBills.filter(b => b.isActive && b.type === "expense").reduce((s, b) => s + b.amount, 0)
-    const scheduled = data.scheduledTransactions
-      .filter(t => !t.isCompleted && t.type === "expense" && t.scheduledDate.startsWith(currentMonth))
+    const scheduled = data.transactions.filter(t => t.status === "pending")
+      .filter(t => t.type === "expense" && t.date.startsWith(currentMonth))
       .reduce((s, t) => s + t.amount, 0)
     return fixed + scheduled
-  }, [isFutureMonth, data.fixedBills, data.scheduledTransactions, currentMonth])
+  }, [isFutureMonth, data.fixedBills, data.transactions, currentMonth])
 
   const income = useMemo(() => forecastIncome ?? getTotalIncome(currentMonth), [forecastIncome, getTotalIncome, currentMonth])
   const expenses = useMemo(() => forecastExpenses ?? getTotalExpenses(currentMonth), [forecastExpenses, getTotalExpenses, currentMonth])

@@ -17,6 +17,10 @@ export interface Transaction {
   date: string
   notes?: string
   wallet?: "digital" | "cash"
+  status?: "pending" | "completed"
+  installmentNumber?: number
+  totalInstallments?: number
+  installmentGroupId?: string
 }
 
 export interface Goal {
