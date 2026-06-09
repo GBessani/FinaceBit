@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, getCurrentMonth, getMonthName, parseMonth } from "@/lib/utils"
 import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -20,6 +20,7 @@ type TransactionType = "income" | "expense" | "transfer"
 export function TransactionsList() {
   const { data, addTransaction, updateTransaction, deleteTransaction, confirmTransaction, getCategory, isLoaded } = useFinance()
   const [activeTab, setActiveTab] = useState<Tab>("completed")
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -37,6 +38,7 @@ export function TransactionsList() {
     const txs = data.transactions.filter(t => {
       if (filterType !== "all" && t.type !== filterType) return false
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
+      if (selectedMonth && !t.date.startsWith(selectedMonth)) return false
       return true
     })
 
@@ -45,7 +47,7 @@ export function TransactionsList() {
       overdue: txs.filter(t => t.status === "pending" && t.date < todayStr),
       completed: txs.filter(t => t.status !== "pending").sort((a, b) => b.date.localeCompare(a.date)),
     }
-  }, [data.transactions, search, filterType, todayStr])
+  }, [data.transactions, search, filterType, todayStr, selectedMonth])
 
   // Form state
   const [form, setForm] = useState<{
@@ -169,6 +171,30 @@ export function TransactionsList() {
 
   return (
     <div className="space-y-4">
+      {/* Month selector */}
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => {
+          if (!selectedMonth) return
+          const { year, month } = parseMonth(selectedMonth)
+          const d = new Date(year, month - 2, 1)
+          setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
+        }} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <button onClick={() => setSelectedMonth(null)}
+          className={`flex-1 text-center font-semibold text-sm py-1.5 rounded-lg transition-colors ${!selectedMonth ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}>
+          {selectedMonth ? `${getMonthName(parseMonth(selectedMonth).month)} ${parseMonth(selectedMonth).year}` : "Todos os meses"}
+        </button>
+        <button onClick={() => {
+          const base = selectedMonth ?? getCurrentMonth()
+          const { year, month } = parseMonth(base)
+          const d = new Date(year, month, 1)
+          setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
+        }} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
