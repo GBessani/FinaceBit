@@ -69,20 +69,25 @@ export function OnboardingTour() {
 
     const rect = el.getBoundingClientRect()
     const pad = 8
-    setTargetRect({ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 })
-
-    const tw = 320; const th = 160
-    let top = 0; let left = 0
-
-    if (step.position === "bottom") { top = rect.bottom + pad + 12; left = rect.left + rect.width / 2 - tw / 2 }
-    else if (step.position === "top") { top = rect.top - th - pad - 12; left = rect.left + rect.width / 2 - tw / 2 }
-    else if (step.position === "left") { top = rect.top + rect.height / 2 - th / 2; left = rect.left - tw - pad - 12 }
-    else { top = rect.top + rect.height / 2 - th / 2; left = rect.right + pad + 12 }
-
-    left = Math.max(16, Math.min(left, window.innerWidth - tw - 16))
-    top = Math.max(16, Math.min(top, window.innerHeight - th - 16))
-    setTooltipPos({ top, left })
+    // Scroll first, then recalculate after animation
     el.scrollIntoView({ behavior: "smooth", block: "center" })
+
+    setTimeout(() => {
+      const r2 = el.getBoundingClientRect()
+      setTargetRect({ top: r2.top - pad, left: r2.left - pad, width: r2.width + pad * 2, height: r2.height + pad * 2 })
+
+      const tw = 320; const th = 180
+      let top = 0; let left = 0
+
+      if (step.position === "bottom") { top = r2.bottom + pad + 12; left = r2.left + r2.width / 2 - tw / 2 }
+      else if (step.position === "top") { top = r2.top - th - pad - 12; left = r2.left + r2.width / 2 - tw / 2 }
+      else if (step.position === "left") { top = r2.top + r2.height / 2 - th / 2; left = r2.left - tw - pad - 12 }
+      else { top = r2.top + r2.height / 2 - th / 2; left = r2.right + pad + 12 }
+
+      left = Math.max(16, Math.min(left, window.innerWidth - tw - 16))
+      top = Math.max(80, Math.min(top, window.innerHeight - th - 16))
+      setTooltipPos({ top, left })
+    }, 500)
   }, [phase, currentStep])
 
   useEffect(() => {
