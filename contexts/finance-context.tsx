@@ -129,6 +129,7 @@ interface FinanceContextType {
   deleteTransaction: (id: string) => Promise<void>
   addCategory: (category: Category) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
+  updateCategory: (category: Category) => Promise<void>
   addGoal: (goal: Goal) => Promise<void>
   updateGoal: (goal: Goal) => Promise<void>
   deleteGoal: (id: string) => Promise<void>
@@ -319,6 +320,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteCategory = React.useCallback(async (id: string) => {
     await supabase.from("categories").delete().eq("id", id)
     setData(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }))
+  }, [supabase])
+
+  const updateCategory = React.useCallback(async (c: Category) => {
+    await supabase.from("categories").update({
+      name: c.name, icon: c.icon, color: c.color, type: c.type
+    }).eq("id", c.id)
+    setData(prev => ({ ...prev, categories: prev.categories.map(x => x.id === c.id ? c : x) }))
   }, [supabase])
 
   const addGoal = React.useCallback(async (g: Goal) => {
@@ -692,7 +700,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     <FinanceContext.Provider value={{
       data, isLoaded, user,
       addTransaction, updateTransaction, deleteTransaction, confirmTransaction,
-      addCategory, deleteCategory,
+      addCategory, updateCategory, deleteCategory,
       addGoal, updateGoal, deleteGoal,
       addFixedBill, updateFixedBill, deleteFixedBill,
       getCategory, getTotalIncome, getTotalExpenses, getBalance,
