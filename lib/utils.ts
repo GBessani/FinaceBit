@@ -48,3 +48,14 @@ export function parseMonth(monthStr: string): { year: number; month: number } {
   const [year, month] = monthStr.split("-").map(Number)
   return { year, month: month - 1 }
 }
+
+export function localDateStr(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+}
+
+export function getInvoiceWindow(closingDay: number): { from: string; to: string } {
+  const today = new Date()
+  const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
+  const closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
+  return { from: localDateStr(closeFrom), to: localDateStr(closeTo) }
+}

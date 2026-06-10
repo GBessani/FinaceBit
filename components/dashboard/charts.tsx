@@ -1,7 +1,7 @@
 "use client"
 
 import { useFinance } from "@/contexts/finance-context"
-import { formatCurrency, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
+import { formatCurrency, getInvoiceWindow, localDateStr, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
 import { useMemo } from "react"
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -112,20 +112,12 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       ...data.transactions.filter(t => t.status === "completed").map(t => t.date.substring(0, 7)),
     ])
 
-    // Transações concluídas
-    data.transactions.filter(t => t.status !== "pending").forEach(t => {
+    // Transações manuais
+    data.transactions.forEach(t => {
       const key = t.date.substring(0, 7)
       if (!months[key]) return
       if (t.type === "income") months[key].income += t.amount
       else if (t.type === "expense") months[key].expense += t.amount
-    })
-
-    // Transações pendentes → somam na previsão
-    data.transactions.filter(t => t.status === "pending").forEach(t => {
-      const key = t.date.substring(0, 7)
-      if (!months[key]) return
-      if (t.type === "income") months[key].forecastIncome += t.amount
-      else if (t.type === "expense") months[key].forecastExpense += t.amount
     })
 
     // Contas fixas — apenas previsão no mês futuro
@@ -232,13 +224,11 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
       const card = data.creditCards.find(c => c.id === i.creditCardId)
       if (!card) return
 
-      const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, card.closingDay + 1)
-      const closeTo = new Date(today.getFullYear(), today.getMonth(), card.closingDay)
+      const { from: closeFrom, to: closeTo } = getInvoiceWindow(card.closingDay)
 
       const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
       const purchaseDate = purchase?.purchaseDate ?? ""
-      if (!purchaseDate || purchaseDate < fmt(closeFrom) || purchaseDate > fmt(closeTo)) return
-
+      if (!purchaseDate || purchaseDate < closeFrom || purchaseDate > closeTo) return
       const catId = purchase?.categoryId ?? ""
       const catName = catId ? (getCategory(catId)?.name ?? "Outros") : "Outros"
       byCategory[catName] = (byCategory[catName] || 0) + i.amount

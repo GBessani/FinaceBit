@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
-import { formatCurrency, getCurrentMonth, getMonthName, parseMonth } from "@/lib/utils"
+import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
 import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -52,10 +52,7 @@ export function TransactionsList() {
   }, [data.transactions])
 
   const today = startOfDay(new Date())
-  const todayStr = (() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
-  })()
+  const todayStr = localDateStr()
 
   // Classify transactions
   const { pending, overdue, completed } = useMemo(() => {
@@ -310,20 +307,20 @@ export function TransactionsList() {
                       className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar
                     </button>
-                    <button onClick={() => openEdit(tx)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => openEdit(tx)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
                       <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setDeleteId(tx.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteId(tx.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </button>
                   </div>
                 )}
                 {activeTab === "completed" && (
                   <div className="flex items-center justify-end gap-1 mt-2">
-                    <button onClick={() => openEdit(tx)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => openEdit(tx)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
                       <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setDeleteId(tx.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteId(tx.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </button>
                   </div>
@@ -340,7 +337,7 @@ export function TransactionsList() {
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
               <h3 className="font-semibold">{editingTx ? "Editar Transação" : "Nova Transação"}</h3>
-              <button onClick={resetForm} className="p-2 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
+              <button onClick={resetForm} className="p-1.5 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               {/* Carteira */}
@@ -367,7 +364,7 @@ export function TransactionsList() {
 
               {/* Descrição */}
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Descrição</label>
+                <label className="text-sm font-medium mb-1 block">Descrição</label>
                 <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Ex: Aluguel, Salário..."
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required />
@@ -376,7 +373,7 @@ export function TransactionsList() {
               <div className="grid grid-cols-2 gap-3">
                 {/* Valor */}
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block">Valor (R$)</label>
+                  <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
                   <input value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                     type="number" min="0" step="0.01" placeholder="0,00"
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required />
@@ -384,7 +381,7 @@ export function TransactionsList() {
                 {/* Parcelas */}
                 {!editingTx && (
                   <div>
-                    <label className="text-sm font-medium mb-1.5 block">Parcelas</label>
+                    <label className="text-sm font-medium mb-1 block">Parcelas</label>
                     <select value={form.installments} onChange={e => setForm(p => ({ ...p, installments: e.target.value }))}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none">
                       {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
@@ -397,7 +394,7 @@ export function TransactionsList() {
 
               {/* Data */}
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Data</label>
+                <label className="text-sm font-medium mb-1 block">Data</label>
                 <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 {form.date > todayStr && (
@@ -408,7 +405,7 @@ export function TransactionsList() {
               {/* Categoria */}
               {form.type !== "transfer" && (
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block">Categoria</label>
+                  <label className="text-sm font-medium mb-1 block">Categoria</label>
                   <select value={form.categoryId} onChange={e => setForm(p => ({ ...p, categoryId: e.target.value }))}
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none">
                     <option value="">Sem categoria</option>
