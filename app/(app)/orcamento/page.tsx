@@ -160,7 +160,7 @@ export default function OrcamentoPage() {
                     {isOver && <span className="flex items-center gap-1 text-xs text-red-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" /> Limite excedido</span>}
                     {isWarning && <span className="flex items-center gap-1 text-xs text-amber-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" /> 80% atingido</span>}
                     {!isOver && !isWarning && percent > 0 && <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium"><CheckCircle className="h-3.5 w-3.5" /> No limite</span>}
-                    <button onClick={() => setDeleteId(budget.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteId(budget.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
@@ -185,10 +185,10 @@ export default function OrcamentoPage() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="font-semibold text-lg">Novo Orçamento</h3>
+            <h3 className="font-semibold">Novo Orçamento</h3>
             <p className="text-sm text-muted-foreground -mt-2">Para {getMonthName(month)} {year}</p>
             <div>
-              <label className="text-sm font-medium mb-1 block">Categoria</label>
+              <label className="text-sm font-medium mb-1.5 block">Categoria</label>
               <select value={categoryId} onChange={e => { setCategoryId(e.target.value); setErrors(p => ({ ...p, category: "" })) }}
                 className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.category ? "border-red-400" : "border-border"}`}>
                 <option value="">Selecione...</option>
@@ -199,7 +199,7 @@ export default function OrcamentoPage() {
               {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Limite mensal (R$)</label>
+              <label className="text-sm font-medium mb-1.5 block">Limite mensal (R$)</label>
               <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setErrors(p => ({ ...p, amount: "" })) }}
                 placeholder="0,00" min="0" step="0.01"
                 className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.amount ? "border-red-400" : "border-border"}`} />

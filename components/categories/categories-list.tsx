@@ -6,12 +6,11 @@ import { useFinance } from "@/contexts/finance-context"
 import { Category } from "@/lib/types"
 import { generateId } from "@/lib/utils"
 import { CategoryIcon, availableIcons, availableEmojis } from "@/components/categories/category-icon"
-import { Plus, Trash2, X, Pencil } from "lucide-react"
+import { Plus, Trash2, X } from "lucide-react"
 
 export function CategoriesList() {
-  const { data, addCategory, updateCategory, deleteCategory, isLoaded } = useFinance()
+  const { data, addCategory, deleteCategory, isLoaded } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [editingCategory, setEditingCategory] = useState<typeof data.categories[0] | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense")
@@ -70,18 +69,14 @@ export function CategoriesList() {
         {categories.map((category) => (
           <div
             key={category.id}
-            className="bg-card border border-border rounded-xl p-4 shadow-sm group relative"
+            className="bg-card border border-border rounded-xl p-5 shadow-sm group relative"
           >
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-              <button onClick={() => setEditingCategory(category)}
-                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setDeleteId(category.id)}
-                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            <button
+              onClick={() => setDeleteId(category.id)}
+              className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
 
             <div
               className="p-3 rounded-xl w-fit mb-3"
@@ -105,18 +100,6 @@ export function CategoriesList() {
           }}
         />
       )}
-      {/* Modal editar emoji/cor */}
-      {editingCategory && (
-        <EditCategoryModal
-          category={editingCategory}
-          onClose={() => setEditingCategory(null)}
-          onSave={(icon, color) => {
-            updateCategory({ ...editingCategory, icon, color })
-            setEditingCategory(null)
-          }}
-        />
-      )}
-
       <DeleteConfirm
         isOpen={!!deleteId}
         title="Excluir categoria?"
@@ -168,7 +151,7 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="font-semibold text-lg">
+          <h3 className="font-semibold">
             Nova Categoria de {type === "income" ? "Receita" : "Despesa"}
           </h3>
           <button
@@ -257,100 +240,6 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
             Criar Categoria
           </button>
         </form>
-      </div>
-    </div>
-  )
-}
-interface EditCategoryModalProps {
-  category: { id: string; name: string; icon: string; color: string; type: string }
-  onClose: () => void
-  onSave: (icon: string, color: string) => void
-}
-
-const COLORS = [
-  "#10b981","#6366f1","#f59e0b","#ef4444","#8b5cf6","#ec4899",
-  "#3b82f6","#0891b2","#f97316","#84cc16","#14b8a6","#a855f7",
-]
-
-function EditCategoryModal({ category, onClose, onSave }: EditCategoryModalProps) {
-  const [icon, setIcon] = useState(category.icon)
-  const [color, setColor] = useState(category.color)
-  const [iconMode, setIconMode] = useState<"icons" | "emojis">(
-    availableIcons.includes(category.icon) ? "icons" : "emojis"
-  )
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: `${color}20` }}>
-              <CategoryIcon icon={icon} color={color} size={20} />
-            </div>
-            <div>
-              <h3 className="font-semibold">{category.name}</h3>
-              <p className="text-xs text-muted-foreground">Editar ícone e cor</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-secondary rounded-lg">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {/* Cor */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Cor</label>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map(c => (
-                <button key={c} onClick={() => setColor(c)}
-                  className={`w-8 h-8 rounded-full transition-transform ${color === c ? "scale-125 ring-2 ring-offset-2 ring-primary" : ""}`}
-                  style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Ícone/Emoji */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Ícone</label>
-            <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-2">
-              <button type="button" onClick={() => setIconMode("icons")}
-                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "icons" ? "bg-card shadow" : "text-muted-foreground"}`}>
-                🎨 Ícones
-              </button>
-              <button type="button" onClick={() => setIconMode("emojis")}
-                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "emojis" ? "bg-card shadow" : "text-muted-foreground"}`}>
-                😀 Emojis
-              </button>
-            </div>
-            <div className="max-h-48 overflow-y-auto pr-1">
-              <div className="grid grid-cols-8 gap-2">
-                {iconMode === "icons" ? availableIcons.map((iconName) => (
-                  <button key={iconName} type="button" onClick={() => setIcon(iconName)}
-                    className={`p-2 rounded-lg border transition-colors ${icon === iconName ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                    <CategoryIcon icon={iconName} size={18} />
-                  </button>
-                )) : availableEmojis.map((emoji: string) => (
-                  <button key={emoji} type="button" onClick={() => setIcon(emoji)}
-                    className={`p-2 rounded-lg border text-lg transition-colors ${icon === emoji ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button onClick={onClose}
-              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-sm">
-              Cancelar
-            </button>
-            <button onClick={() => onSave(icon, color)}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-              Salvar
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )

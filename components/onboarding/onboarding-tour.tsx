@@ -130,10 +130,10 @@ export function OnboardingTour() {
           Vou te mostrar as principais funcionalidades em menos de 1 minuto. Você pode pular a qualquer momento!
         </p>
         <div className="flex gap-3">
-          <button onClick={dismiss} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-secondary transition-colors">
+          <button onClick={dismiss} className="flex-1 px-4 py-2 border border-border rounded-lg text-sm hover:bg-secondary transition-colors">
             Pular
           </button>
-          <button onClick={startTour} className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+          <button onClick={startTour} className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
             Começar tour <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -178,7 +178,7 @@ export function OnboardingTour() {
           </div>
           <div className="flex items-center gap-2">
             {currentStep > 0 && (
-              <button onClick={prev} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+              <button onClick={prev} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}

@@ -233,7 +233,7 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Filtros de período */}
-      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Calendar className="h-4 w-4" />

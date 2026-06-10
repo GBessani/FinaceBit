@@ -208,7 +208,7 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="font-semibold text-lg">
+          <h3 className="font-semibold">
             {goal ? "Editar Meta" : "Nova Meta"}
           </h3>
           <button

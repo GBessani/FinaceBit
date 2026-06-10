@@ -114,7 +114,7 @@ export default function PerfilPage() {
       setCustomAvatar(publicUrl)
       toast.success("Foto atualizada!")
     } catch (err) {
-      console.error("Avatar upload error:", err)
+      console.error(err)
       toast.error("Erro ao fazer upload. Tente novamente.")
     } finally {
       setUploading(false)
@@ -297,7 +297,7 @@ export default function PerfilPage() {
           {!editingBalance && (
             <button
               onClick={() => { setBalanceInput(initialBalance.toString()); setEditingBalance(true) }}
-              className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+              className="p-2 hover:bg-secondary rounded-lg transition-colors"
             >
               <Pencil className="h-4 w-4 text-muted-foreground" />
             </button>

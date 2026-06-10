@@ -60,7 +60,7 @@ export function TransferForm({ onClose }: TransferFormProps) {
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <ArrowLeftRight className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="font-semibold text-lg">Nova Transferência</h3>
+            <h3 className="font-semibold">Nova Transferência</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-secondary rounded-lg transition-colors">
             <X className="h-5 w-5" />

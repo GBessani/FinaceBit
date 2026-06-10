@@ -8,7 +8,7 @@ import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-f
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
-  TrendingUp, TrendingDown, ArrowLeftRight, Search, Filter, CreditCard
+  TrendingUp, TrendingDown, ArrowLeftRight, Search, Filter
 } from "lucide-react"
 import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
@@ -57,42 +57,6 @@ export function TransactionsList() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
   })()
 
-  // Virtual invoice transactions from credit cards
-  const virtualInvoices = useMemo(() => {
-    const today = new Date()
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
-
-    return data.creditCards.map(card => {
-      const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, card.closingDay + 1)
-      const closeTo = new Date(today.getFullYear(), today.getMonth(), card.closingDay)
-
-      const activeInstallments = data.ccInstallments.filter(i => {
-        if (i.creditCardId !== card.id || i.isPaid) return false
-        const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
-        const pd = purchase?.purchaseDate ?? ""
-        return pd >= fmt(closeFrom) && pd <= fmt(closeTo)
-      })
-
-      if (activeInstallments.length === 0) return null
-
-      const total = activeInstallments.reduce((s, i) => s + i.amount, 0)
-      const dueDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(card.dueDay).padStart(2,"0")}`
-
-      return {
-        id: `virtual-invoice-${card.id}`,
-        description: `Fatura ${card.name}`,
-        amount: total,
-        type: "expense" as const,
-        categoryId: "",
-        date: dueDate,
-        wallet: "digital" as const,
-        status: "pending" as const,
-        isVirtual: true,
-        cardColor: card.color,
-      }
-    }).filter((v): v is NonNullable<typeof v> => v !== null)
-  }, [data.creditCards, data.ccInstallments, data.ccPurchases])
-
   // Classify transactions
   const { pending, overdue, completed } = useMemo(() => {
     const txs = data.transactions.filter(t => {
@@ -102,21 +66,12 @@ export function TransactionsList() {
       return true
     })
 
-    // Add virtual invoices to pending (filtered by search/month too)
-    const filteredInvoices = virtualInvoices.filter(v => {
-      if (!v) return false
-      if (filterType !== "all" && filterType !== "expense") return false
-      if (search && !v.description.toLowerCase().includes(search.toLowerCase())) return false
-      if (selectedMonth && !v.date.startsWith(selectedMonth)) return false
-      return true
-    })
-
     return {
-      pending: [...txs.filter(t => t.status === "pending" && t.date >= todayStr), ...filteredInvoices.filter(Boolean)] as any[],
+      pending: txs.filter(t => t.status === "pending" && t.date >= todayStr),
       overdue: txs.filter(t => t.status === "pending" && t.date < todayStr),
       completed: txs.filter(t => t.status !== "pending").sort((a, b) => b.date.localeCompare(a.date)),
     }
-  }, [data.transactions, search, filterType, todayStr, selectedMonth, virtualInvoices])
+  }, [data.transactions, search, filterType, todayStr, selectedMonth])
 
   // Form state
   const [form, setForm] = useState<{
@@ -326,19 +281,14 @@ export function TransactionsList() {
           {currentList.map(tx => {
             const category = getCategory(tx.categoryId)
             return (
-              <div key={tx.id} className={`bg-card border rounded-xl p-4 ${ 
-                (tx as any).isVirtual ? "border-purple-300 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-900/10" :
+              <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
                 activeTab === "overdue" ? "border-red-200 dark:border-red-900" :
                 activeTab === "pending" ? "border-amber-200 dark:border-amber-900" :
                 "border-border"
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {(tx as any).isVirtual ? (
-                      <div className="p-1.5 rounded-lg shrink-0" style={{ backgroundColor: `${(tx as any).cardColor}22` }}>
-                        <CreditCard className="h-4 w-4" style={{ color: (tx as any).cardColor }} />
-                      </div>
-                    ) : category && <CategoryIcon icon={category.icon} color={category.color} />}
+                    {category && <CategoryIcon icon={category.icon} color={category.color} />}
                     <div className="min-w-0">
                       <p className="font-medium truncate">{tx.description}</p>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -354,26 +304,26 @@ export function TransactionsList() {
                     </span>
                   </div>
                 </div>
-                {(activeTab === "pending" || activeTab === "overdue") && !(tx as any).isVirtual && (
+                {(activeTab === "pending" || activeTab === "overdue") && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                     <button onClick={() => handleConfirm(tx)}
                       className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar
                     </button>
-                    <button onClick={() => openEdit(tx)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => openEdit(tx)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setDeleteId(tx.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteId(tx.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </button>
                   </div>
                 )}
-                {activeTab === "completed" && !(tx as any).isVirtual && (
+                {activeTab === "completed" && (
                   <div className="flex items-center justify-end gap-1 mt-2">
-                    <button onClick={() => openEdit(tx)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => openEdit(tx)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setDeleteId(tx.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteId(tx.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </button>
                   </div>
@@ -390,7 +340,7 @@ export function TransactionsList() {
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
               <h3 className="font-semibold">{editingTx ? "Editar Transação" : "Nova Transação"}</h3>
-              <button onClick={resetForm} className="p-1.5 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
+              <button onClick={resetForm} className="p-2 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               {/* Carteira */}
@@ -417,7 +367,7 @@ export function TransactionsList() {
 
               {/* Descrição */}
               <div>
-                <label className="text-sm font-medium mb-1 block">Descrição</label>
+                <label className="text-sm font-medium mb-1.5 block">Descrição</label>
                 <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Ex: Aluguel, Salário..."
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required />
@@ -426,7 +376,7 @@ export function TransactionsList() {
               <div className="grid grid-cols-2 gap-3">
                 {/* Valor */}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
+                  <label className="text-sm font-medium mb-1.5 block">Valor (R$)</label>
                   <input value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                     type="number" min="0" step="0.01" placeholder="0,00"
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" required />
@@ -434,7 +384,7 @@ export function TransactionsList() {
                 {/* Parcelas */}
                 {!editingTx && (
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Parcelas</label>
+                    <label className="text-sm font-medium mb-1.5 block">Parcelas</label>
                     <select value={form.installments} onChange={e => setForm(p => ({ ...p, installments: e.target.value }))}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none">
                       {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
@@ -447,7 +397,7 @@ export function TransactionsList() {
 
               {/* Data */}
               <div>
-                <label className="text-sm font-medium mb-1 block">Data</label>
+                <label className="text-sm font-medium mb-1.5 block">Data</label>
                 <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 {form.date > todayStr && (
@@ -458,7 +408,7 @@ export function TransactionsList() {
               {/* Categoria */}
               {form.type !== "transfer" && (
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Categoria</label>
+                  <label className="text-sm font-medium mb-1.5 block">Categoria</label>
                   <select value={form.categoryId} onChange={e => setForm(p => ({ ...p, categoryId: e.target.value }))}
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none">
                     <option value="">Sem categoria</option>

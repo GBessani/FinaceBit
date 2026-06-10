@@ -108,9 +108,9 @@ export default function ClientesPage() {
       {/* Clientes ativos */}
       {activeClients.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-semibold text-lg">Clientes ativos ({activeClients.length})</h2>
+          <h2 className="font-semibold">Clientes ativos ({activeClients.length})</h2>
           {activeClients.map(client => (
-            <div key={client.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+            <div key={client.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-primary font-bold text-sm">{(client.name || client.email)[0].toUpperCase()}</span>
@@ -135,9 +135,9 @@ export default function ClientesPage() {
       {/* Convites pendentes */}
       {pendingClients.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-semibold text-lg">Convites pendentes ({pendingClients.length})</h2>
+          <h2 className="font-semibold">Convites pendentes ({pendingClients.length})</h2>
           {pendingClients.map((client, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div key={i} className="bg-card border border-border rounded-xl p-5 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                   <Clock className="h-5 w-5 text-amber-600" />

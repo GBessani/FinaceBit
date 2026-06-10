@@ -193,10 +193,10 @@ export default function CartoesPage() {
                     {status === "due" && <span className="flex items-center gap-1 text-xs text-red-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Vence em {daysToDue}d</span>}
                     {status === "closing" && <span className="flex items-center gap-1 text-xs text-amber-500 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Fecha em {daysToClose}d</span>}
                     <button onClick={() => { setEditingId(card.id); setCardForm({ name: card.name, limitAmount: card.limitAmount.toString(), dueDay: card.dueDay.toString(), color: card.color }); setShowCardForm(true) }}
-                      className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Pencil className="h-4 w-4 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setDeleteCardId(card.id)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+                    <button onClick={() => setDeleteCardId(card.id)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
@@ -294,7 +294,7 @@ export default function CartoesPage() {
       {payingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="font-semibold text-lg">Pagar Fatura</h3>
+            <h3 className="font-semibold">Pagar Fatura</h3>
             <div className="p-4 bg-secondary/50 rounded-xl">
               <p className="text-sm text-muted-foreground">Total a pagar</p>
               <p className="text-2xl font-bold mt-1">{formatCurrency(payingInvoice.total)}</p>
@@ -331,11 +331,11 @@ export default function CartoesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Registrar Compra</h3>
-              <button onClick={() => setShowPurchaseForm(null)} className="p-1.5 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
+              <h3 className="font-semibold">Registrar Compra</h3>
+              <button onClick={() => setShowPurchaseForm(null)} className="p-2 hover:bg-secondary rounded-lg"><X className="h-4 w-4" /></button>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Descrição</label>
+              <label className="text-sm font-medium mb-1.5 block">Descrição</label>
               <input value={purchaseForm.description}
                 onChange={e => { setPurchaseForm(p => ({ ...p, description: e.target.value })); setPurchaseErrors(p => ({ ...p, description: "" })) }}
                 placeholder="Ex: Supermercado, Netflix..."
@@ -344,7 +344,7 @@ export default function CartoesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
+                <label className="text-sm font-medium mb-1.5 block">Valor (R$)</label>
                 <input value={purchaseForm.amount}
                   onChange={e => { setPurchaseForm(p => ({ ...p, amount: e.target.value })); setPurchaseErrors(p => ({ ...p, amount: "" })) }}
                   placeholder="0,00" type="number" min="0" step="0.01"
@@ -352,7 +352,7 @@ export default function CartoesPage() {
                 {purchaseErrors.amount && <p className="text-xs text-red-500 mt-1">{purchaseErrors.amount}</p>}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Parcelas</label>
+                <label className="text-sm font-medium mb-1.5 block">Parcelas</label>
                 <select value={purchaseForm.installments} onChange={e => setPurchaseForm(p => ({ ...p, installments: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                   {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
@@ -362,7 +362,7 @@ export default function CartoesPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Categoria</label>
+              <label className="text-sm font-medium mb-1.5 block">Categoria</label>
               <select value={purchaseForm.categoryId}
                 onChange={e => { setPurchaseForm(p => ({ ...p, categoryId: e.target.value })); setPurchaseErrors(p => ({ ...p, categoryId: "" })) }}
                 className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${purchaseErrors.categoryId ? "border-red-400" : "border-border"}`}>
@@ -372,7 +372,7 @@ export default function CartoesPage() {
               {purchaseErrors.categoryId && <p className="text-xs text-red-500 mt-1">{purchaseErrors.categoryId}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Data da compra</label>
+              <label className="text-sm font-medium mb-1.5 block">Data da compra</label>
               <input type="date" value={purchaseForm.date} onChange={e => setPurchaseForm(p => ({ ...p, date: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
@@ -396,22 +396,22 @@ export default function CartoesPage() {
       {showCardForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="font-semibold text-lg">{editingId ? "Editar" : "Novo"} Cartão</h3>
+            <h3 className="font-semibold">{editingId ? "Editar" : "Novo"} Cartão</h3>
             <div>
-              <label className="text-sm font-medium mb-1 block">Nome</label>
+              <label className="text-sm font-medium mb-1.5 block">Nome</label>
               <input value={cardForm.name} onChange={e => setCardForm(p => ({ ...p, name: e.target.value }))}
                 placeholder="Ex: Nubank, Itaú..."
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">Limite (R$)</label>
+                <label className="text-sm font-medium mb-1.5 block">Limite (R$)</label>
                 <input value={cardForm.limitAmount} onChange={e => setCardForm(p => ({ ...p, limitAmount: e.target.value }))}
                   placeholder="5000" type="number"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Dia vencimento</label>
+                <label className="text-sm font-medium mb-1.5 block">Dia vencimento</label>
                 <input value={cardForm.dueDay} onChange={e => setCardForm(p => ({ ...p, dueDay: e.target.value }))}
                   placeholder="10" type="number" min="1" max="31"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />

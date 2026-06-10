@@ -575,7 +575,7 @@ export default function InvestimentosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-border">
-              <h3 className="font-semibold text-lg">{editingId ? "Editar" : "Novo"} Investimento</h3>
+              <h3 className="font-semibold">{editingId ? "Editar" : "Novo"} Investimento</h3>
               {/* Tab switch no form */}
               {!editingId && (
                 <div className="flex gap-2 mt-3">
@@ -599,27 +599,27 @@ export default function InvestimentosPage() {
               {tab === "savings" ? (
                 <>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Nome da caixinha</label>
+                    <label className="text-sm font-medium mb-1.5 block">Nome da caixinha</label>
                     <input value={fixForm.name} onChange={e => setFixForm(p => ({ ...p, name: e.target.value }))}
                       placeholder="Ex: Reserva de emergência, Viagem..."
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Saldo inicial (R$)</label>
+                      <label className="text-sm font-medium mb-1.5 block">Saldo inicial (R$)</label>
                       <input value={fixForm.investedAmount} onChange={e => setFixForm(p => ({ ...p, investedAmount: e.target.value }))}
                         placeholder="0,00" type="text"
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Data de início</label>
+                      <label className="text-sm font-medium mb-1.5 block">Data de início</label>
                       <input value={fixForm.investedAt} onChange={e => setFixForm(p => ({ ...p, investedAt: e.target.value }))}
                         type="date"
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Rendimento</label>
+                    <label className="text-sm font-medium mb-1.5 block">Rendimento</label>
                     <div className="grid grid-cols-3 gap-2 mb-2">
                       {SAVINGS_BOX_RATES.map(r => (
                         <button key={r.label}
@@ -656,7 +656,7 @@ export default function InvestimentosPage() {
               ) : tab === "variable" ? (
                 <>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Ticker / ID</label>
+                    <label className="text-sm font-medium mb-1.5 block">Ticker / ID</label>
                     <input value={varForm.ticker} onChange={e => onTickerChange(e.target.value)}
                       placeholder="Ex: PETR4, bitcoin"
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -666,13 +666,13 @@ export default function InvestimentosPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Nome</label>
+                    <label className="text-sm font-medium mb-1.5 block">Nome</label>
                     <input value={varForm.name} onChange={e => setVarForm(p => ({ ...p, name: e.target.value }))}
                       placeholder="Nome do ativo"
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Tipo</label>
+                    <label className="text-sm font-medium mb-1.5 block">Tipo</label>
                     <select value={varForm.assetType} onChange={e => setVarForm(p => ({ ...p, assetType: e.target.value as AssetType }))}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                       <option value="stock">Ação / FII / ETF</option>
@@ -699,14 +699,14 @@ export default function InvestimentosPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Quantidade</label>
+                      <label className="text-sm font-medium mb-1.5 block">Quantidade</label>
                       <input value={varForm.quantity} onChange={e => { onQuantityChange(e.target.value); setErrors(p => ({ ...p, quantity: "" })) }}
                         placeholder="0,00" type="text"
                         className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.quantity ? "border-red-400" : "border-border"}`} />
                       {errors.quantity && <p className="text-xs text-red-500 mt-1">{errors.quantity}</p>}
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Valor investido (R$)</label>
+                      <label className="text-sm font-medium mb-1.5 block">Valor investido (R$)</label>
                       <input value={priceInput} onChange={e => { onPriceInputChange(e.target.value); setErrors(p => ({ ...p, price: "" })) }}
                         placeholder="0,00" type="text"
                         className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.price ? "border-red-400" : "border-border"}`} />
@@ -728,7 +728,7 @@ export default function InvestimentosPage() {
               ) : (
                 <>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Tipo de investimento</label>
+                    <label className="text-sm font-medium mb-1.5 block">Tipo de investimento</label>
                     <select value={fixForm.name} onChange={e => setFixForm(p => ({ ...p, name: e.target.value }))}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                       <option value="">Selecione...</option>
@@ -737,7 +737,7 @@ export default function InvestimentosPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Valor aplicado (R$)</label>
+                      <label className="text-sm font-medium mb-1.5 block">Valor aplicado (R$)</label>
                       <input value={fixForm.investedAmount} onChange={e => setFixForm(p => ({ ...p, investedAmount: e.target.value }))}
                         placeholder="1000,00" type="text"
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -751,7 +751,7 @@ export default function InvestimentosPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Índice</label>
+                      <label className="text-sm font-medium mb-1.5 block">Índice</label>
                       <select value={fixForm.rateIndex} onChange={e => setFixForm(p => ({ ...p, rateIndex: e.target.value as FixedIncomeIndex }))}
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                         {RATE_INDEXES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -769,7 +769,7 @@ export default function InvestimentosPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Data de vencimento (opcional)</label>
+                    <label className="text-sm font-medium mb-1.5 block">Data de vencimento (opcional)</label>
                     <input value={fixForm.maturityDate} onChange={e => setFixForm(p => ({ ...p, maturityDate: e.target.value }))}
                       type="date"
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -823,7 +823,7 @@ export default function InvestimentosPage() {
             <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <div>
-                  <h3 className="font-semibold text-lg">{inv.name}</h3>
+                  <h3 className="font-semibold">{inv.name}</h3>
                   <p className="text-sm text-muted-foreground">Histórico de movimentações</p>
                 </div>
                 <button onClick={() => setTxModalId(null)} className="p-2 hover:bg-secondary rounded-lg transition-colors">

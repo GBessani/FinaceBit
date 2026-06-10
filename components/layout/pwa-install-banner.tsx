@@ -52,7 +52,7 @@ export function PWAInstallBanner() {
         className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
         Instalar
       </button>
-      <button onClick={dismiss} className="p-1.5 hover:bg-secondary rounded-lg transition-colors shrink-0">
+      <button onClick={dismiss} className="p-2 hover:bg-secondary rounded-lg transition-colors shrink-0">
         <X className="h-4 w-4 text-muted-foreground" />
       </button>
     </div>
