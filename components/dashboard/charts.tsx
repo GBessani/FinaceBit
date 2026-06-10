@@ -112,12 +112,20 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       ...data.transactions.filter(t => t.status === "completed").map(t => t.date.substring(0, 7)),
     ])
 
-    // Transações manuais
-    data.transactions.forEach(t => {
+    // Transações concluídas
+    data.transactions.filter(t => t.status !== "pending").forEach(t => {
       const key = t.date.substring(0, 7)
       if (!months[key]) return
       if (t.type === "income") months[key].income += t.amount
       else if (t.type === "expense") months[key].expense += t.amount
+    })
+
+    // Transações pendentes → somam na previsão
+    data.transactions.filter(t => t.status === "pending").forEach(t => {
+      const key = t.date.substring(0, 7)
+      if (!months[key]) return
+      if (t.type === "income") months[key].forecastIncome += t.amount
+      else if (t.type === "expense") months[key].forecastExpense += t.amount
     })
 
     // Contas fixas — apenas previsão no mês futuro
