@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
-import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
+import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr} from "@/lib/utils"
 import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -46,7 +46,7 @@ export function TransactionsList() {
     for (let i = -1; i <= 3; i++) {
       const d = new Date()
       d.setMonth(d.getMonth() + i)
-      months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`)
+      months.add(localDateStr(d).substring(0, 7))
     }
     return Array.from(months).sort().reverse()
   }, [data.transactions])
@@ -131,7 +131,7 @@ export function TransactionsList() {
       for (let i = 1; i <= installments; i++) {
         const [y, m, d] = form.date.split("-").map(Number)
         const instDate = new Date(y, m - 1 + (i - 1), d)
-        const instDateStr = `${instDate.getFullYear()}-${String(instDate.getMonth()+1).padStart(2,"0")}-${String(instDate.getDate()).padStart(2,"0")}`
+        const instDateStr = localDateStr(instDate)
         // Each installment is 1 month apart from the previous, starting from purchase date
         const instStatus: "pending" | "completed" = instDateStr > todayStr ? "pending" : "completed"
         await addTransaction({

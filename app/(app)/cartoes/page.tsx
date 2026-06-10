@@ -28,13 +28,13 @@ export default function CartoesPage() {
 
   const [purchaseForm, setPurchaseForm] = useState({
     description: "", amount: "", categoryId: "",
-    date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })(),
+    date: (() => { const d = new Date(); return localDateStr(d) })(),
     installments: "1",
   })
   const [purchaseErrors, setPurchaseErrors] = useState<Record<string, string>>({})
 
   const today = new Date()
-  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`
+  const currentMonthStr = localDateStr(today).substring(0, 7)
 
   // Retorna a janela de datas da fatura ativa (não paga)
   // Fatura ativa = compras entre o fechamento anterior e o fechamento atual
@@ -107,7 +107,7 @@ export default function CartoesPage() {
 
     toast.success(installments > 1 ? `${installments}x de ${formatCurrency(parseFloat(purchaseForm.amount)/installments)} registradas!` : "Compra registrada!")
     setShowPurchaseForm(null)
-    setPurchaseForm({ description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })(), installments: "1" })
+    setPurchaseForm({ description: "", amount: "", categoryId: "", date: (() => { const d = new Date(); return localDateStr(d) })(), installments: "1" })
     setPurchaseErrors({})
   }
 

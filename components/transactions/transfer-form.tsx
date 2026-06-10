@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { ArrowLeftRight, X, Building2, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { generateId } from "@/lib/utils"
+import { generateId, localDateStr } from "@/lib/utils"
 
 type Direction = "to_cash" | "to_digital"
 
@@ -18,7 +18,7 @@ export function TransferForm({ onClose }: TransferFormProps) {
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+    return localDateStr(d)
   })
   const [notes, setNotes] = useState("")
   const [loading, setLoading] = useState(false)
@@ -60,7 +60,7 @@ export function TransferForm({ onClose }: TransferFormProps) {
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <ArrowLeftRight className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="font-semibold">Nova Transferência</h3>
+            <h3 className="font-semibold text-lg">Nova Transferência</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-secondary rounded-lg transition-colors">
             <X className="h-5 w-5" />

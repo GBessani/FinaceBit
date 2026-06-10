@@ -218,7 +218,7 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
   const chartData = useMemo(() => {
     const today = new Date()
     const byCategory: Record<string, number> = {}
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+    const fmt = (d: Date) => localDateStr(d)
 
     data.ccInstallments.filter(i => !i.isPaid).forEach(i => {
       const card = data.creditCards.find(c => c.id === i.creditCardId)
@@ -229,6 +229,7 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
       const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
       const purchaseDate = purchase?.purchaseDate ?? ""
       if (!purchaseDate || purchaseDate < closeFrom || purchaseDate > closeTo) return
+
       const catId = purchase?.categoryId ?? ""
       const catName = catId ? (getCategory(catId)?.name ?? "Outros") : "Outros"
       byCategory[catName] = (byCategory[catName] || 0) + i.amount
