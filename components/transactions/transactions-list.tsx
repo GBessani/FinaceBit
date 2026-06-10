@@ -83,6 +83,7 @@ export function TransactionsList() {
     wallet: "digital" | "cash"
     installments: string
     status: "pending" | "completed"
+    notes: string
   }>({
     type: "expense",
     description: "",
@@ -92,10 +93,11 @@ export function TransactionsList() {
     wallet: "digital",
     installments: "1",
     status: "completed",
+    notes: "to_cash",
   })
 
   function resetForm() {
-    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: todayStr, wallet: "digital", installments: "1", status: "completed" })
+    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: todayStr, wallet: "digital", installments: "1", status: "completed", notes: "to_cash" })
     setEditingTx(null)
     setShowForm(false)
   }
@@ -110,6 +112,7 @@ export function TransactionsList() {
       wallet: tx.wallet ?? "digital",
       installments: tx.totalInstallments?.toString() ?? "1",
       status: tx.status ?? "completed",
+      notes: tx.notes ?? "to_cash",
     })
     setEditingTx(tx)
     setShowForm(true)
@@ -125,6 +128,9 @@ export function TransactionsList() {
     const installments = parseInt(form.installments) || 1
     const groupId = installments > 1 ? crypto.randomUUID() : undefined
     const status: "pending" | "completed" = form.date > todayStr ? "pending" : "completed"
+    const description = form.type === "transfer"
+      ? (form.notes === "to_cash" ? "Transferência: Conta Digital → Dinheiro Físico" : "Transferência: Dinheiro Físico → Conta Digital")
+      : form.description
 
     if (editingTx) {
       await updateTransaction({ ...editingTx, ...form, amount: parseFloat(form.amount), status })
@@ -156,7 +162,7 @@ export function TransactionsList() {
     } else {
       await addTransaction({
         id: crypto.randomUUID(),
-        description: form.description,
+        description: form.type === "transfer" ? description : form.description,
         amount: parseFloat(form.amount),
         type: form.type,
         categoryId: form.categoryId,
@@ -358,7 +364,7 @@ export function TransactionsList() {
               {/* Tipo */}
               <div className="flex gap-1 p-1 bg-secondary rounded-lg">
                 {([["expense", "Despesa"], ["income", "Receita"], ["transfer", "Transferência"]] as const).map(([val, label]) => (
-                  <button key={val} type="button" onClick={() => setForm(p => ({ ...p, type: val, categoryId: "" }))}
+                  <button key={val} type="button" onClick={() => setForm(p => ({ ...p, type: val, categoryId: "", notes: val === 'transfer' ? 'to_cash' : p.notes }))}
                     className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${form.type === val ? "bg-card shadow" : "text-muted-foreground"}`}>
                     {label}
                   </button>
