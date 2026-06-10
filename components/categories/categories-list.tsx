@@ -69,7 +69,7 @@ export function CategoriesList() {
         {categories.map((category) => (
           <div
             key={category.id}
-            className="bg-card border border-border rounded-xl p-5 shadow-sm group relative"
+            className="bg-card border border-border rounded-xl p-4 shadow-sm group relative"
           >
             <button
               onClick={() => setDeleteId(category.id)}
@@ -151,7 +151,7 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="font-semibold">
+          <h3 className="font-semibold text-lg">
             Nova Categoria de {type === "income" ? "Receita" : "Despesa"}
           </h3>
           <button
@@ -177,30 +177,30 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Ícone</label>
-            <div className="grid grid-cols-8 gap-2">
-              {/* Toggle ícones/emojis */}
-              <div className="col-span-full flex gap-1 p-1 bg-secondary rounded-lg mb-1">
-                <button type="button" onClick={() => setIconMode("icons")}
-                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "icons" ? "bg-card shadow" : "text-muted-foreground"}`}>
-                  🎨 Ícones
-                </button>
-                <button type="button" onClick={() => setIconMode("emojis")}
-                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "emojis" ? "bg-card shadow" : "text-muted-foreground"}`}>
-                  😀 Emojis
-                </button>
+            <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-2">
+              <button type="button" onClick={() => setIconMode("icons")}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "icons" ? "bg-card shadow" : "text-muted-foreground"}`}>
+                🎨 Ícones
+              </button>
+              <button type="button" onClick={() => setIconMode("emojis")}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${iconMode === "emojis" ? "bg-card shadow" : "text-muted-foreground"}`}>
+                😀 Emojis
+              </button>
+            </div>
+            <div className="max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-8 gap-2">
+                {iconMode === "icons" ? availableIcons.map((iconName) => (
+                  <button key={iconName} type="button" onClick={() => setIcon(iconName)}
+                    className={`p-2 rounded-lg border transition-colors ${icon === iconName ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
+                    <CategoryIcon icon={iconName} size={18} />
+                  </button>
+                )) : availableEmojis.map((emoji) => (
+                  <button key={emoji} type="button" onClick={() => setIcon(emoji)}
+                    className={`p-2 rounded-lg border text-lg transition-colors ${icon === emoji ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
+                    {emoji}
+                  </button>
+                ))}
               </div>
-
-              {iconMode === "icons" ? availableIcons.map((iconName) => (
-                <button key={iconName} type="button" onClick={() => setIcon(iconName)}
-                  className={`p-2 rounded-lg border transition-colors ${icon === iconName ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                  <CategoryIcon icon={iconName} size={18} />
-                </button>
-              )) : availableEmojis.map((emoji) => (
-                <button key={emoji} type="button" onClick={() => setIcon(emoji)}
-                  className={`p-2 rounded-lg border text-lg transition-colors ${icon === emoji ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}>
-                  {emoji}
-                </button>
-              ))}
             </div>
           </div>
 
