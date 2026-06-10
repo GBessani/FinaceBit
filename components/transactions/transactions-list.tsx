@@ -8,7 +8,7 @@ import { format, parseISO, isAfter, isBefore, isToday, startOfDay } from "date-f
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
-  TrendingUp, TrendingDown, ArrowLeftRight, Search, Filter
+  TrendingUp, TrendingDown, ArrowLeftRight, Search, Filter, CreditCard
 } from "lucide-react"
 import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
@@ -57,6 +57,42 @@ export function TransactionsList() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
   })()
 
+  // Virtual invoice transactions from credit cards
+  const virtualInvoices = useMemo(() => {
+    const today = new Date()
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+
+    return data.creditCards.map(card => {
+      const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, card.closingDay + 1)
+      const closeTo = new Date(today.getFullYear(), today.getMonth(), card.closingDay)
+
+      const activeInstallments = data.ccInstallments.filter(i => {
+        if (i.creditCardId !== card.id || i.isPaid) return false
+        const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
+        const pd = purchase?.purchaseDate ?? ""
+        return pd >= fmt(closeFrom) && pd <= fmt(closeTo)
+      })
+
+      if (activeInstallments.length === 0) return null
+
+      const total = activeInstallments.reduce((s, i) => s + i.amount, 0)
+      const dueDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(card.dueDay).padStart(2,"0")}`
+
+      return {
+        id: `virtual-invoice-${card.id}`,
+        description: `Fatura ${card.name}`,
+        amount: total,
+        type: "expense" as const,
+        categoryId: "",
+        date: dueDate,
+        wallet: "digital" as const,
+        status: "pending" as const,
+        isVirtual: true,
+        cardColor: card.color,
+      }
+    }).filter((v): v is NonNullable<typeof v> => v !== null)
+  }, [data.creditCards, data.ccInstallments, data.ccPurchases])
+
   // Classify transactions
   const { pending, overdue, completed } = useMemo(() => {
     const txs = data.transactions.filter(t => {
@@ -66,12 +102,21 @@ export function TransactionsList() {
       return true
     })
 
+    // Add virtual invoices to pending (filtered by search/month too)
+    const filteredInvoices = virtualInvoices.filter(v => {
+      if (!v) return false
+      if (filterType !== "all" && filterType !== "expense") return false
+      if (search && !v.description.toLowerCase().includes(search.toLowerCase())) return false
+      if (selectedMonth && !v.date.startsWith(selectedMonth)) return false
+      return true
+    })
+
     return {
-      pending: txs.filter(t => t.status === "pending" && t.date >= todayStr),
+      pending: [...txs.filter(t => t.status === "pending" && t.date >= todayStr), ...filteredInvoices.filter(Boolean)] as any[],
       overdue: txs.filter(t => t.status === "pending" && t.date < todayStr),
       completed: txs.filter(t => t.status !== "pending").sort((a, b) => b.date.localeCompare(a.date)),
     }
-  }, [data.transactions, search, filterType, todayStr, selectedMonth])
+  }, [data.transactions, search, filterType, todayStr, selectedMonth, virtualInvoices])
 
   // Form state
   const [form, setForm] = useState<{
@@ -83,7 +128,6 @@ export function TransactionsList() {
     wallet: "digital" | "cash"
     installments: string
     status: "pending" | "completed"
-    notes: string
   }>({
     type: "expense",
     description: "",
@@ -93,11 +137,10 @@ export function TransactionsList() {
     wallet: "digital",
     installments: "1",
     status: "completed",
-    notes: "to_cash",
   })
 
   function resetForm() {
-    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: todayStr, wallet: "digital", installments: "1", status: "completed", notes: "to_cash" })
+    setForm({ type: "expense", description: "", amount: "", categoryId: "", date: todayStr, wallet: "digital", installments: "1", status: "completed" })
     setEditingTx(null)
     setShowForm(false)
   }
@@ -112,7 +155,6 @@ export function TransactionsList() {
       wallet: tx.wallet ?? "digital",
       installments: tx.totalInstallments?.toString() ?? "1",
       status: tx.status ?? "completed",
-      notes: tx.notes ?? "to_cash",
     })
     setEditingTx(tx)
     setShowForm(true)
@@ -128,9 +170,6 @@ export function TransactionsList() {
     const installments = parseInt(form.installments) || 1
     const groupId = installments > 1 ? crypto.randomUUID() : undefined
     const status: "pending" | "completed" = form.date > todayStr ? "pending" : "completed"
-    const description = form.type === "transfer"
-      ? (form.notes === "to_cash" ? "Transferência: Conta Digital → Dinheiro Físico" : "Transferência: Dinheiro Físico → Conta Digital")
-      : form.description
 
     if (editingTx) {
       await updateTransaction({ ...editingTx, ...form, amount: parseFloat(form.amount), status })
@@ -162,7 +201,7 @@ export function TransactionsList() {
     } else {
       await addTransaction({
         id: crypto.randomUUID(),
-        description: form.type === "transfer" ? description : form.description,
+        description: form.description,
         amount: parseFloat(form.amount),
         type: form.type,
         categoryId: form.categoryId,
@@ -287,14 +326,19 @@ export function TransactionsList() {
           {currentList.map(tx => {
             const category = getCategory(tx.categoryId)
             return (
-              <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
+              <div key={tx.id} className={`bg-card border rounded-xl p-4 ${ 
+                (tx as any).isVirtual ? "border-purple-300 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-900/10" :
                 activeTab === "overdue" ? "border-red-200 dark:border-red-900" :
                 activeTab === "pending" ? "border-amber-200 dark:border-amber-900" :
                 "border-border"
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {category && <CategoryIcon icon={category.icon} color={category.color} />}
+                    {(tx as any).isVirtual ? (
+                      <div className="p-1.5 rounded-lg shrink-0" style={{ backgroundColor: `${(tx as any).cardColor}22` }}>
+                        <CreditCard className="h-4 w-4" style={{ color: (tx as any).cardColor }} />
+                      </div>
+                    ) : category && <CategoryIcon icon={category.icon} color={category.color} />}
                     <div className="min-w-0">
                       <p className="font-medium truncate">{tx.description}</p>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -310,7 +354,7 @@ export function TransactionsList() {
                     </span>
                   </div>
                 </div>
-                {(activeTab === "pending" || activeTab === "overdue") && (
+                {(activeTab === "pending" || activeTab === "overdue") && !(tx as any).isVirtual && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                     <button onClick={() => handleConfirm(tx)}
                       className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
@@ -324,7 +368,7 @@ export function TransactionsList() {
                     </button>
                   </div>
                 )}
-                {activeTab === "completed" && (
+                {activeTab === "completed" && !(tx as any).isVirtual && (
                   <div className="flex items-center justify-end gap-1 mt-2">
                     <button onClick={() => openEdit(tx)} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
                       <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -364,7 +408,7 @@ export function TransactionsList() {
               {/* Tipo */}
               <div className="flex gap-1 p-1 bg-secondary rounded-lg">
                 {([["expense", "Despesa"], ["income", "Receita"], ["transfer", "Transferência"]] as const).map(([val, label]) => (
-                  <button key={val} type="button" onClick={() => setForm(p => ({ ...p, type: val, categoryId: "", notes: val === 'transfer' ? 'to_cash' : p.notes }))}
+                  <button key={val} type="button" onClick={() => setForm(p => ({ ...p, type: val, categoryId: "" }))}
                     className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${form.type === val ? "bg-card shadow" : "text-muted-foreground"}`}>
                     {label}
                   </button>
