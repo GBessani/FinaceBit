@@ -5,7 +5,7 @@ import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { Category } from "@/lib/types"
 import { generateId } from "@/lib/utils"
-import { CategoryIcon, availableIcons, availableEmojis } from "@/components/category-icon"
+import { CategoryIcon, availableIcons, availableEmojis } from "@/components/categories/category-icon"
 import { Plus, Trash2, X, Pencil } from "lucide-react"
 
 export function CategoriesList() {
