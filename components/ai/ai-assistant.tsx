@@ -46,7 +46,7 @@ ${data.transactions
   .join("\n")}
 
 Despesas por categoria este mês:
-${Object.entries(
+${(Object.entries(
   data.transactions
     .filter((t) => t.type === "expense" && t.date.startsWith(currentMonth))
     .reduce((acc, t) => {
@@ -55,7 +55,7 @@ ${Object.entries(
       acc[name] = (acc[name] || 0) + t.amount
       return acc
     }, {} as Record<string, number>)
-)
+) as [string, number][])
   .sort((a, b) => b[1] - a[1])
   .map(([name, value]) => `- ${name}: ${formatCurrency(value)}`)
   .join("\n") || "Nenhuma despesa registrada"}

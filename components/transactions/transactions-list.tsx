@@ -229,7 +229,7 @@ export function TransactionsList() {
               placeholder="Buscar transação..."
               className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
-          <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
+          <select value={filterType} onChange={e => setFilterType(e.target.value as "all" | TransactionType)}
             className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none">
             <option value="all">Todos</option>
             <option value="income">Receitas</option>
