@@ -59,3 +59,52 @@ export function getInvoiceWindow(closingDay: number): { from: string; to: string
   const closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
   return { from: localDateStr(closeFrom), to: localDateStr(closeTo) }
 }
+
+/**
+ * Dado o YYYY-MM-DD da compra e o dia de fechamento do cartão, retorna o
+ * YYYY-MM da fatura em que essa compra (1ª parcela) cai.
+ *
+ * Regra: compra feita ATÉ o dia de fechamento (inclusive) entra na fatura
+ * que fecha no mesmo mês; compra feita DEPOIS do fechamento entra na fatura
+ * do mês seguinte. Trata virada de ano.
+ *
+ * Esta é a fonte única da verdade para "em qual fatura a parcela cai" —
+ * substitui o filtro frágil por janela de datas (getInvoiceWindow).
+ */
+export function getInvoiceMonth(purchaseDate: string, closingDay: number): string {
+  const [y, m, d] = purchaseDate.split("-").map(Number)
+  let year = y
+  let month = m // 1-12
+  if (d > closingDay) {
+    month += 1
+    if (month > 12) { month = 1; year += 1 }
+  }
+  return `${year}-${String(month).padStart(2, "0")}`
+}
+
+/**
+ * Retorna o YYYY-MM da fatura ATIVA (a próxima em aberto) de um cartão,
+ * dado seu dia de fechamento. Se a fatura do mês corrente já fechou,
+ * retorna a do mês seguinte. Trata virada de ano.
+ */
+export function getActiveInvoiceMonth(closingDay: number, today: Date = new Date()): string {
+  let year = today.getFullYear()
+  let month = today.getMonth() + 1 // 1-12
+  if (today.getDate() > closingDay) {
+    month += 1
+    if (month > 12) { month = 1; year += 1 }
+  }
+  return `${year}-${String(month).padStart(2, "0")}`
+}
+
+/**
+ * Soma N meses a um YYYY-MM, tratando virada de ano. Útil para calcular
+ * o dueMonth de parcelas a partir do mês da 1ª fatura.
+ */
+export function addMonthsToInvoiceMonth(invoiceMonth: string, monthsToAdd: number): string {
+  const [y, m] = invoiceMonth.split("-").map(Number)
+  const total = (y * 12 + (m - 1)) + monthsToAdd
+  const year = Math.floor(total / 12)
+  const month = (total % 12) + 1
+  return `${year}-${String(month).padStart(2, "0")}`
+}

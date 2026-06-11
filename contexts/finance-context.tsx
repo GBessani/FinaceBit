@@ -16,7 +16,7 @@ import {
   CreditCardPurchase,
   CreditCardInstallment,
 } from "@/lib/types"
-import { localDateStr } from "@/lib/utils"
+import { localDateStr, getInvoiceMonth, addMonthsToInvoiceMonth } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
@@ -498,11 +498,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (!pRow) return
 
+    // FIX: dueMonth da 1ª parcela considera o dia de fechamento do cartão.
+    // Compra feita após o fechamento cai na próxima fatura (não no mês da compra).
+    const card = data.creditCards.find(c => c.id === purchase.creditCardId)
+    const closingDay = card?.closingDay ?? 1
+    const firstInvoiceMonth = getInvoiceMonth(purchase.purchaseDate, closingDay)
+
     const instRows = []
     for (let i = 1; i <= installments; i++) {
-      const [year, month] = purchase.purchaseDate.split("-").map(Number)
-      const d = new Date(year, month - 1 + (i - 1), 1)
-      const dueMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const dueMonth = addMonthsToInvoiceMonth(firstInvoiceMonth, i - 1)
       instRows.push({
         purchase_id: pRow.id, user_id: userId,
         credit_card_id: purchase.creditCardId,
@@ -532,7 +536,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       ccPurchases: [newPurchase, ...prev.ccPurchases],
       ccInstallments: [...prev.ccInstallments, ...newInstallments],
     }))
-  }, [user, supabase])
+  }, [user, supabase, data.creditCards])
 
   /**
    * FIX: Pagar fatura usando os IDs exatos das parcelas exibidas.

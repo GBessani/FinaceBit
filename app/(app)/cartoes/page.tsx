@@ -2,7 +2,7 @@
 
 import { useFinance } from "@/contexts/finance-context"
 import { CreditCard as CreditCardType, CreditCardInstallment } from "@/lib/types"
-import { formatCurrency, getInvoiceWindow, localDateStr } from "@/lib/utils"
+import { formatCurrency, getActiveInvoiceMonth, localDateStr } from "@/lib/utils"
 import { useState, useMemo } from "react"
 import {
   CreditCard as CardIcon, Plus, Trash2, Pencil,
@@ -55,27 +55,25 @@ export default function CartoesPage() {
       let daysToDue = dueDay - currentDay
       if (daysToDue < 0) daysToDue += 30
 
-      const invoiceWindow = getInvoiceWindow(card.closingDay)
-      const activeMonth = invoiceWindow.to.slice(0, 7)
+      const activeMonth = getActiveInvoiceMonth(card.closingDay, today)
 
-      // Parcelas da fatura ativa: filtradas por purchaseDate na janela (lógica original mantida)
-      const currentInstallments = data.ccInstallments.filter(i => {
-        if (i.creditCardId !== card.id || i.isPaid) return false
-        const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
-        const purchaseDate = purchase?.purchaseDate ?? i.purchase?.purchaseDate ?? ""
-        return purchaseDate >= invoiceWindow.from && purchaseDate <= invoiceWindow.to
-      })
+      // FIX: a fatura ativa agrupa parcelas pelo dueMonth (em qual fatura caem),
+      // não pela data da compra. Isso garante que compras feitas após o
+      // fechamento apareçam na próxima fatura — e que o número da "Fatura atual"
+      // bata com a lista de parcelas abaixo (ambos usam dueMonth).
+      const currentInstallments = data.ccInstallments.filter(i =>
+        i.creditCardId === card.id && !i.isPaid && i.dueMonth === activeMonth
+      )
       const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
 
       const allInstallments = data.ccInstallments.filter(
         i => i.creditCardId === card.id && !i.isPaid
       )
 
-      const isClosed = currentDay >= closingDay
       const status = invoiceTotal > 0 && daysToDue <= 5 ? "due" :
                      invoiceTotal > 0 && daysToClose <= 3 ? "closing" : "ok"
 
-      return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }
+      return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, activeMonth }
     })
   }, [data.creditCards, data.ccInstallments, data.ccPurchases, currentMonthStr, today])
 
@@ -165,7 +163,7 @@ export default function CartoesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {cardData.map(({ card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }) => (
+          {cardData.map(({ card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, activeMonth }) => (
             <div key={card.id} className={`bg-card border rounded-xl shadow-sm overflow-hidden ${
               status === "due" ? "border-red-300 dark:border-red-800" :
               status === "closing" ? "border-amber-300 dark:border-amber-800" : "border-border"
@@ -197,9 +195,9 @@ export default function CartoesPage() {
 
                 <div className="mt-4 flex items-end justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">{isClosed ? "Fatura fechada" : "Fatura atual"}</p>
+                    <p className="text-xs text-muted-foreground">Fatura {(() => { const [y, m] = activeMonth.split("-").map(Number); return new Date(y, m - 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) })()}</p>
                     <p className="text-3xl font-bold">{formatCurrency(invoiceTotal)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{currentInstallments.length} item{currentInstallments.length !== 1 ? "s" : ""} este mês</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{currentInstallments.length} item{currentInstallments.length !== 1 ? "s" : ""} nesta fatura</p>
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
                     <p>Limite: {formatCurrency(card.limitAmount)}</p>
