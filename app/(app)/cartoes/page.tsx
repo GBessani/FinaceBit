@@ -23,7 +23,13 @@ export default function CartoesPage() {
   const [cardForm, setCardForm] = useState(emptyCard)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
   const [showPurchaseForm, setShowPurchaseForm] = useState<string | null>(null)
-  const [payingInvoice, setPayingInvoice] = useState<{ cardId: string; month: string; total: number; installments: CreditCardInstallment[] } | null>(null)
+  // FIX: agora armazenamos também os IDs das parcelas para passar ao payCCInvoice
+  const [payingInvoice, setPayingInvoice] = useState<{
+    cardId: string
+    month: string
+    total: number
+    installments: CreditCardInstallment[]
+  } | null>(null)
   const [deletePurchaseId, setDeletePurchaseId] = useState<string | null>(null)
 
   const [purchaseForm, setPurchaseForm] = useState({
@@ -36,8 +42,6 @@ export default function CartoesPage() {
   const today = new Date()
   const currentMonthStr = localDateStr(today).substring(0, 7)
 
-  // Retorna a janela de datas da fatura ativa (não paga)
-  // Fatura ativa = compras entre o fechamento anterior e o fechamento atual
   const expenseCategories = data.categories.filter(c => c.type === "expense")
 
   const cardData = useMemo(() => {
@@ -51,11 +55,10 @@ export default function CartoesPage() {
       let daysToDue = dueDay - currentDay
       if (daysToDue < 0) daysToDue += 30
 
-      // Janela da fatura ativa para este cartão
       const invoiceWindow = getInvoiceWindow(card.closingDay)
       const activeMonth = invoiceWindow.to.slice(0, 7)
 
-      // Parcelas da fatura ativa não pagas (pela data da compra na janela)
+      // Parcelas da fatura ativa: filtradas por purchaseDate na janela (lógica original mantida)
       const currentInstallments = data.ccInstallments.filter(i => {
         if (i.creditCardId !== card.id || i.isPaid) return false
         const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
@@ -64,7 +67,6 @@ export default function CartoesPage() {
       })
       const invoiceTotal = currentInstallments.reduce((s, i) => s + i.amount, 0)
 
-      // Todas as compras do cartão (para listagem)
       const allInstallments = data.ccInstallments.filter(
         i => i.creditCardId === card.id && !i.isPaid
       )
@@ -75,7 +77,7 @@ export default function CartoesPage() {
 
       return { card, currentInstallments, invoiceTotal, allInstallments, daysToClose, daysToDue, status, isClosed, activeMonth }
     })
-  }, [data.creditCards, data.ccInstallments, currentMonthStr, today])
+  }, [data.creditCards, data.ccInstallments, data.ccPurchases, currentMonthStr, today])
 
   async function saveCard() {
     if (!cardForm.name || !cardForm.limitAmount || !cardForm.dueDay) { toast.error("Preencha todos os campos"); return }
@@ -118,7 +120,18 @@ export default function CartoesPage() {
   async function confirmPayInvoice() {
     if (!payingInvoice) return
     const card = data.creditCards.find(c => c.id === payingInvoice.cardId)
-    await payCCInvoice(payingInvoice.cardId, payingInvoice.month, payingInvoice.total, card?.name)
+
+    // FIX: passa os IDs exatos das parcelas exibidas, não filtra por mês no contexto.
+    // Isso garante que payCCInvoice marca exatamente o que o usuário viu na tela.
+    const installmentIds = payingInvoice.installments.map(i => i.id)
+
+    await payCCInvoice(
+      payingInvoice.cardId,
+      payingInvoice.month,
+      payingInvoice.total,
+      installmentIds,
+      card?.name,
+    )
     toast.success("Fatura paga!")
     setPayingInvoice(null)
   }
@@ -227,7 +240,6 @@ export default function CartoesPage() {
                     <p className="text-sm text-muted-foreground text-center py-4">Nenhuma compra pendente</p>
                   ) : (
                     <>
-                      {/* Agrupar por mês */}
                       {(Array.from(new Set(allInstallments.map(i => i.dueMonth))).sort() as string[]).map((month: string) => {
                         const monthInst = allInstallments.filter(i => i.dueMonth === month)
                         const [y, m] = month.split("-").map(Number)
@@ -327,7 +339,7 @@ export default function CartoesPage() {
                 <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
                 <input value={purchaseForm.amount}
                   onChange={e => { setPurchaseForm(p => ({ ...p, amount: e.target.value })); setPurchaseErrors(p => ({ ...p, amount: "" })) }}
-                  placeholder="0,00" type="number" min="0" step="0.01"
+                  placeholder="0,00" type="number" min="0.01" step="0.01"
                   className={`w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${purchaseErrors.amount ? "border-red-400" : "border-border"}`} />
                 {purchaseErrors.amount && <p className="text-xs text-red-500 mt-1">{purchaseErrors.amount}</p>}
               </div>
@@ -387,7 +399,7 @@ export default function CartoesPage() {
               <div>
                 <label className="text-sm font-medium mb-1 block">Limite (R$)</label>
                 <input value={cardForm.limitAmount} onChange={e => setCardForm(p => ({ ...p, limitAmount: e.target.value }))}
-                  placeholder="5000" type="number"
+                  placeholder="5000" type="number" min="0.01"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>

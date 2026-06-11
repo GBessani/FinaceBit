@@ -16,6 +16,7 @@ import {
   CreditCardPurchase,
   CreditCardInstallment,
 } from "@/lib/types"
+import { localDateStr } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
@@ -151,7 +152,8 @@ interface FinanceContextType {
   ccPurchases: CreditCardPurchase[]
   ccInstallments: CreditCardInstallment[]
   addCCPurchase: (purchase: Omit<CreditCardPurchase, "id" | "createdAt">, installments: number) => Promise<void>
-  payCCInvoice: (cardId: string, month: string, totalAmount: number, cardName?: string) => Promise<void>
+  // FIX: agora recebe os IDs exatos das parcelas a pagar, em vez de filtrar por due_month
+  payCCInvoice: (cardId: string, month: string, totalAmount: number, installmentIds: string[], cardName?: string) => Promise<void>
   deleteCCPurchase: (purchaseId: string) => Promise<void>
   addBudget: (b: Omit<Budget, "id">) => Promise<void>
   updateBudget: (b: Budget) => Promise<void>
@@ -235,7 +237,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }),
     })
 
-    // Load initial balance
     const { data: profile } = await supabase
       .from("profiles")
       .select("initial_balance")
@@ -262,7 +263,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase, loadData])
 
-  // Recarrega dados quando consultor muda de cliente
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null
@@ -370,13 +370,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (row) {
       const newBill = mapFixedBill(row)
 
-      // Se for parcelado, cria os lançamentos futuros automaticamente
       if (b.totalInstallments && b.startDate) {
         const installments = []
         for (let i = 0; i < b.totalInstallments; i++) {
           const date = new Date(b.startDate)
           date.setMonth(date.getMonth() + i)
-          const dateStr = date.toISOString().split("T")[0]
+          const dateStr = localDateStr(date)
           installments.push({
             user_id: targetUserIdRef.current || user!.id,
             description: `${b.description} (${i + 1}/${b.totalInstallments})`,
@@ -390,11 +389,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
             installment_number: i + 1,
           })
         }
-        const { data: scheduled } = await supabase.from("scheduled_transactions").insert(installments).select()
-        setData(prev => ({
-          ...prev,
-          fixedBills: [...prev.fixedBills, newBill],
-        }))
+        await supabase.from("scheduled_transactions").insert(installments).select()
+        setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
       } else {
         setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
         toast.success("Conta fixa salva!")
@@ -443,7 +439,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= 7
     })
   }, [data.fixedBills])
-
 
   const addInvestment = React.useCallback(async (inv: Investment) => {
     if (!user) return
@@ -494,7 +489,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
     const userId = targetUserIdRef.current || user.id
 
-    // Insert purchase
     const { data: pRow } = await supabase.from("credit_card_purchases").insert({
       user_id: userId, credit_card_id: purchase.creditCardId,
       description: purchase.description, total_amount: purchase.totalAmount,
@@ -504,7 +498,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (!pRow) return
 
-    // Insert installments
     const instRows = []
     for (let i = 1; i <= installments; i++) {
       const [year, month] = purchase.purchaseDate.split("-").map(Number)
@@ -541,42 +534,58 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }))
   }, [user, supabase])
 
-  const payCCInvoice = React.useCallback(async (cardId: string, month: string, totalAmount: number, cardName?: string) => {
-    if (!user) return
+  /**
+   * FIX: Pagar fatura usando os IDs exatos das parcelas exibidas.
+   *
+   * Problema anterior: usava `.eq("due_month", month)` no Supabase e
+   * `inst.dueMonth === month` no estado — mas a UI mostrava parcelas
+   * filtradas por data de compra (que podem ter dueMonth diferente do
+   * activeMonth). Resultado: a query não encontrava as parcelas certas e
+   * a UI nunca limpava após o pagamento.
+   *
+   * Solução: a página passa os IDs exatos das parcelas que exibiu, e aqui
+   * usamos `.in("id", installmentIds)` para marcar exatamente essas.
+   */
+  const payCCInvoice = React.useCallback(async (
+    cardId: string,
+    month: string,
+    totalAmount: number,
+    installmentIds: string[],
+    cardName?: string,
+  ) => {
+    if (!user || installmentIds.length === 0) return
     const userId = targetUserIdRef.current || user.id
 
-    // Create transaction for total
+    // Lança a despesa da fatura — usa localDateStr() para evitar bug de fuso
     const { data: txRow } = await supabase.from("transactions").insert({
       user_id: userId,
       description: cardName ? `Fatura ${cardName}` : `Fatura cartão`,
       amount: totalAmount,
       type: "expense",
       category_id: null,
-      date: new Date().toISOString().split("T")[0],
+      date: localDateStr(),
       wallet: "digital",
+      status: "completed",
     }).select().single()
 
     if (!txRow) return
 
-    // Mark installments as paid
-    await supabase.from("credit_card_installments")
-      .update({ is_paid: true, paid_at: new Date().toISOString(), transaction_id: txRow.id })
-      .eq("credit_card_id", cardId)
-      .eq("due_month", month)
-      .eq("is_paid", false)
+    // Marca exatamente as parcelas exibidas como pagas (por ID, não por mês)
+    await supabase
+      .from("credit_card_installments")
+      .update({
+        is_paid: true,
+        paid_at: new Date().toISOString(),
+        transaction_id: txRow.id,
+      })
+      .in("id", installmentIds)
 
-    // Update state
-    const newTx = {
-      id: txRow.id, description: txRow.description, amount: Number(txRow.amount),
-      type: txRow.type as "income" | "expense" | "transfer", categoryId: txRow.category_id ?? "",
-      date: txRow.date, wallet: (txRow.wallet ?? "digital") as "digital" | "cash",
-    }
-
+    // Atualiza o estado local com os mesmos IDs
     setData(prev => ({
       ...prev,
-      transactions: [newTx, ...prev.transactions],
+      transactions: [mapTransaction(txRow), ...prev.transactions],
       ccInstallments: prev.ccInstallments.map((inst: CreditCardInstallment) =>
-        inst.creditCardId === cardId && inst.dueMonth === month && !inst.isPaid
+        installmentIds.includes(inst.id)
           ? { ...inst, isPaid: true, paidAt: new Date().toISOString(), transactionId: txRow.id }
           : inst
       ),
