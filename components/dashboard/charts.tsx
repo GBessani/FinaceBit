@@ -1,7 +1,7 @@
 "use client"
 
 import { useFinance } from "@/contexts/finance-context"
-import { formatCurrency, getInvoiceWindow, localDateStr, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
+import { formatCurrency, getActiveInvoiceMonth, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
 import { useMemo } from "react"
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -213,23 +213,23 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
 }
 export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, getCategory } = useFinance()
-  const currentMonth = selectedMonth ?? getCurrentMonth()
 
   const chartData = useMemo(() => {
     const today = new Date()
     const byCategory: Record<string, number> = {}
-    const fmt = (d: Date) => localDateStr(d)
 
+    // FIX (#18): usa o mesmo critério da página de Cartões — parcelas cujo
+    // dueMonth bate com a fatura ativa do cartão. Antes filtrava por janela de
+    // data da compra (getInvoiceWindow), o que excluía compras feitas após o
+    // fechamento e divergia do "Total pendente"/"Fatura atual".
     data.ccInstallments.filter(i => !i.isPaid).forEach(i => {
       const card = data.creditCards.find(c => c.id === i.creditCardId)
       if (!card) return
 
-      const { from: closeFrom, to: closeTo } = getInvoiceWindow(card.closingDay)
+      const activeMonth = getActiveInvoiceMonth(card.closingDay, today)
+      if (i.dueMonth !== activeMonth) return
 
       const purchase = data.ccPurchases.find(p => p.id === i.purchaseId)
-      const purchaseDate = purchase?.purchaseDate ?? ""
-      if (!purchaseDate || purchaseDate < closeFrom || purchaseDate > closeTo) return
-
       const catId = purchase?.categoryId ?? ""
       const catName = catId ? (getCategory(catId)?.name ?? "Outros") : "Outros"
       byCategory[catName] = (byCategory[catName] || 0) + i.amount
