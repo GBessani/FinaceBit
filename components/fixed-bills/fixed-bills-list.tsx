@@ -39,6 +39,7 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
 export function FixedBillsList() {
   const { data, addFixedBill, updateFixedBill, deleteFixedBill, getCategory, addTransaction } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [editingBill, setEditingBill] = React.useState<FixedBill | null>(null)
@@ -112,17 +113,23 @@ export function FixedBillsList() {
   }
 
   const confirmBill = async (bill: FixedBill) => {
-    const today = localDateStr()
-    await addTransaction({
-      id: "",
-      description: bill.description,
-      amount: bill.amount,
-      type: bill.type as "income" | "expense",
-      categoryId: bill.categoryId,
-      date: today,
-      wallet: "digital" as const,
-      notes: `Confirmado de conta fixa`,
-    })
+    if (confirmingId === bill.id) return
+    setConfirmingId(bill.id)
+    try {
+      const today = localDateStr()
+      await addTransaction({
+        id: "",
+        description: bill.description,
+        amount: bill.amount,
+        type: bill.type as "income" | "expense",
+        categoryId: bill.categoryId,
+        date: today,
+        wallet: "digital" as const,
+        notes: `Confirmado de conta fixa`,
+      })
+    } finally {
+      setConfirmingId(null)
+    }
   }
 
   const toggleActive = (bill: FixedBill) => {
@@ -335,8 +342,9 @@ export function FixedBillsList() {
                         </div>
                         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
                           <Button variant="ghost" size="sm" onClick={() => confirmBill(bill)}
-                            className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" />Confirmar
+                            disabled={confirmingId === bill.id}
+                            className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />{confirmingId === bill.id ? "Confirmando..." : "Confirmar"}
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => toggleActive(bill)} title={bill.isActive ? "Pausar" : "Ativar"}>
                             {bill.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -386,8 +394,9 @@ export function FixedBillsList() {
                         </div>
                         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
                           <Button variant="ghost" size="sm" onClick={() => confirmBill(bill)}
-                            className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" />Confirmar
+                            disabled={confirmingId === bill.id}
+                            className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />{confirmingId === bill.id ? "Confirmando..." : "Confirmar"}
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => toggleActive(bill)} title={bill.isActive ? "Pausar" : "Ativar"}>
                             {bill.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}

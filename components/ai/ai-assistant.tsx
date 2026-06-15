@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth } from "@/lib/utils"
 import { Sparkles, Send, X, Loader2, Bot, User } from "lucide-react"
@@ -28,8 +28,9 @@ export function AIAssistant() {
   const currentMonth = getCurrentMonth()
   const { month, year } = parseMonth(currentMonth)
 
-  const financialContext = isLoaded
-    ? `
+  const financialContext = useMemo(() => {
+    if (!isLoaded) return ""
+    return `
 Dados financeiros do usuário (${getMonthName(month)} ${year}):
 - Receita total: ${formatCurrency(getTotalIncome(currentMonth))}
 - Despesas totais: ${formatCurrency(getTotalExpenses(currentMonth))}
@@ -72,7 +73,8 @@ ${
     : "Nenhuma meta cadastrada"
 }
 `
-    : ""
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.transactions, data.goals, isLoaded, month, year, currentMonth])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -130,7 +132,7 @@ ${
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value)
+          const chunk = decoder.decode(value, { stream: true })
           if (chunk) {
             setMessages(prev =>
               prev.map(m =>

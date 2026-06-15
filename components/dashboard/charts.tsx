@@ -142,6 +142,19 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
 
   const hasForecast = monthlyData.some(m => m.forecastIncome > 0 || m.forecastExpense > 0)
 
+  const maxDataValue = Math.max(
+    1,
+    ...monthlyData.map(d => d.income + d.forecastIncome + d.expense + d.forecastExpense)
+  )
+  const yTickFormatter = (v: number) => {
+    if (v === 0) return "0"
+    if (maxDataValue >= 1000) {
+      const k = v / 1000
+      return `${Number.isInteger(k) ? k : k.toFixed(1)}k`
+    }
+    return v.toFixed(0)
+  }
+
   if (!isLoaded) {
     return (
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
@@ -167,7 +180,7 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
           <BarChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
-            <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={v => `${v / 1000}k`} />
+            <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={yTickFormatter} />
             <Tooltip
               formatter={(value: number, name: string) => {
                 const labels: Record<string, string> = {

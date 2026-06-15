@@ -32,6 +32,7 @@ export default function CartoesPage() {
     installments: CreditCardInstallment[]
   } | null>(null)
   const [deletePurchaseId, setDeletePurchaseId] = useState<string | null>(null)
+  const [payingInvoiceLoading, setPayingInvoiceLoading] = useState(false)
 
   const [purchaseForm, setPurchaseForm] = useState({
     description: "", amount: "", categoryId: "",
@@ -130,22 +131,23 @@ export default function CartoesPage() {
   }
 
   async function confirmPayInvoice() {
-    if (!payingInvoice) return
-    const card = data.creditCards.find(c => c.id === payingInvoice.cardId)
-
-    // FIX: passa os IDs exatos das parcelas exibidas, não filtra por mês no contexto.
-    // Isso garante que payCCInvoice marca exatamente o que o usuário viu na tela.
-    const installmentIds = payingInvoice.installments.map(i => i.id)
-
-    await payCCInvoice(
-      payingInvoice.cardId,
-      payingInvoice.month,
-      payingInvoice.total,
-      installmentIds,
-      card?.name,
-    )
-    toast.success("Fatura paga!")
-    setPayingInvoice(null)
+    if (!payingInvoice || payingInvoiceLoading) return
+    setPayingInvoiceLoading(true)
+    try {
+      const card = data.creditCards.find(c => c.id === payingInvoice.cardId)
+      const installmentIds = payingInvoice.installments.map(i => i.id)
+      await payCCInvoice(
+        payingInvoice.cardId,
+        payingInvoice.month,
+        payingInvoice.total,
+        installmentIds,
+        card?.name,
+      )
+      toast.success("Fatura paga!")
+      setPayingInvoice(null)
+    } finally {
+      setPayingInvoiceLoading(false)
+    }
   }
 
   if (!isLoaded) return (
@@ -338,9 +340,9 @@ export default function CartoesPage() {
                 className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors">
                 Cancelar
               </button>
-              <button onClick={confirmPayInvoice}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                Confirmar Pagamento
+              <button onClick={confirmPayInvoice} disabled={payingInvoiceLoading}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                {payingInvoiceLoading ? "Processando..." : "Confirmar Pagamento"}
               </button>
             </div>
           </div>

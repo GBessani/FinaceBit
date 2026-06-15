@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Trash2, AlertTriangle } from "lucide-react"
 
 interface DeleteConfirmProps {
@@ -17,6 +18,12 @@ export function DeleteConfirm({
   onConfirm,
   onCancel,
 }: DeleteConfirmProps) {
+  const [fired, setFired] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) setFired(false)
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
@@ -37,8 +44,9 @@ export function DeleteConfirm({
             Cancelar
           </button>
           <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+            onClick={() => { if (!fired) { setFired(true); onConfirm() } }}
+            disabled={fired}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Trash2 className="h-4 w-4" />
             Excluir
