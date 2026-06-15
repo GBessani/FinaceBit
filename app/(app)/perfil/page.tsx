@@ -17,6 +17,7 @@ export default function PerfilPage() {
   const { isConsultant, myConsultant, revokeConsultant } = useConsultant()
   const router = useRouter()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [consultantCode, setConsultantCode] = useState("")
   const [activatingCode, setActivatingCode] = useState(false)
   const [codeActivated, setCodeActivated] = useState(false)
@@ -141,8 +142,23 @@ export default function PerfilPage() {
   }
 
   async function handleDeleteAccount() {
-    toast.error("Para excluir sua conta, entre em contato: suporte@finacebit.com")
-    setShowDeleteConfirm(false)
+    if (deleting) return
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error || "Erro ao excluir conta.")
+        return
+      }
+      await signOut()
+      router.push("/login")
+    } catch {
+      toast.error("Erro ao excluir conta. Tente novamente.")
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   if (!user) return null
@@ -464,15 +480,17 @@ export default function PerfilPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors"
+                disabled={deleting}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteAccount}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Excluir
+                {deleting ? <><Loader2 className="h-4 w-4 animate-spin" />Excluindo...</> : "Excluir conta"}
               </button>
             </div>
           </div>
