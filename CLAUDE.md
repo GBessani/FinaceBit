@@ -129,11 +129,12 @@ __tests__/                  # Testes Vitest
    NÃO criar modais inline com `fixed inset-0 z-50`.
 
 8. **Funções utilitárias centralizadas** (não duplicar):
-   - `getInvoiceWindow(closingDay)` → janela de fatura do cartão
-   - `getInvoiceMonth(purchaseDate, closingDay)` → qual fatura recebe a compra
+   - `getInvoiceMonth(purchaseDate, closingDay)` → qual fatura recebe a compra (fonte da verdade)
+   - `getActiveInvoiceMonth(closingDay, today?)` → próxima fatura em aberto do cartão
    - `addMonthsToInvoiceMonth(invoiceMonth, n)` → dueMonth das parcelas seguintes
    - `localDateStr(date)` → data local sem bug de fuso
    - `formatCurrency(value)` → R$ formatado pt-BR
+   - ⚠️ `getInvoiceWindow(closingDay)` → **DEPRECATED.** Filtro frágil por janela de datas de compra; substituído por `getInvoiceMonth`/`getActiveInvoiceMonth`. Não usar em código novo; candidato a remoção.
 
 9. **Padrão visual:** cards `p-5`, botões ícone `p-2`, labels `mb-1.5`, empty states `py-12`,
    inputs com `focus:outline-none focus:ring-2 focus:ring-primary/20`, botões `rounded-lg`.
@@ -164,7 +165,7 @@ __tests__/                  # Testes Vitest
 - `consultant_clients` — vínculo N:M consultor↔cliente (`status`: pending/active/revoked)
 - `scheduled_transactions` — parcelas geradas por contas fixas parceladas
 
-**Migrations aplicadas:** 013 (wallet), 014 (credit cards), 015 (transaction status + installments).
+**Migrations aplicadas:** 013 (wallet), 014 (credit cards), 015 (transaction status + installments), 016 (consultant FK).
 
 ---
 
@@ -199,32 +200,28 @@ __tests__/                  # Testes Vitest
 - **[Cartão] Pagar fatura não baixava as parcelas** — `payCCInvoice` usa `.in("id", installmentIds)` com IDs exatos, não mais `.eq("due_month", month)`.
 - **[Cartão] #18 — Compra no cartão não aparecia na fatura ativa nem no gráfico por categoria** — `addCCPurchase` calcula `dueMonth` via `getInvoiceMonth(purchaseDate, closingDay)`; fatura, barra de limite e gráfico alinhados ao mesmo critério.
 - **[UX] Aba "Cartão" no formulário de transações** — terceira opção de carteira com seleção de cartão, preview de parcelas e submit via `addCCPurchase`.
+- **[Bug] `fixed-bills-list` confirmava conta fixa com `id: ""`** — trocado por `crypto.randomUUID()`; inserts UUID inválidos eram rejeitados silenciosamente pelo Postgres.
+- **[Bug] `transfer-form` usava `generateId()` para transferências** — trocado por `crypto.randomUUID()`; transferências não eram criadas no banco.
+- **[Cálculo] `ExpenseChart`, `orcamento` e `perfil` incluíam transações `pending` em totais reais** — adicionado filtro `status !== "pending"` nos três lugares.
+- **[Dados] `notes: form.type` em parcelas** — campo `notes` recebia o tipo da transação ("income"/"expense") em vez de ficar vazio; removido.
 
 > **Pendência de dados:** parcelas gravadas antes da correção têm `due_month` calculado sem considerar o dia de fechamento. Falta script SQL de migração para recalcular `due_month` das parcelas não pagas usando `purchase_date + closing_day` do cartão.
 
-### Próximo: Lote A — Validação de inputs (iniciado, não entregue)
+### Revisão de código — pendências técnicas (não bloqueantes)
 
-Arquivos parcialmente preparados: `lib/validation.ts`, `transactions-list.tsx`, `fixed-bills-list.tsx`.
-Resolve: **#10, #13, #14, #15, #17, #24, #25, #26, #27** e parte do **#19**.
+- **[Médio] Arredondamento de parcelas não fecha o total.** Em `addCCPurchase` e no parcelamento de transações normais em `transactions-list.tsx`, cada parcela é `Math.round((total/n)*100)/100`. Quando a divisão não é exata, a soma diverge do valor original (R$100 em 3x → 3×33,33 = 99,99). Corrigir jogando a diferença de centavos na primeira ou última parcela.
 
-- **#15 / #26** — data vazia quebra banco (erro 22007) — validar antes do INSERT
-- **#27 / #24** — texto em campo de valor → `NaN` → `null` → erro 23502 — inputs numéricos obrigatórios
-- **#10** — conta fixa aceita valor negativo
-- **#14** — cartão aceita limite negativo
-- **#25** — renda fixa aceita % CDI negativa
-- **#17** — campos bloqueiam zero sem dar feedback
-- **#13** — descrição sem limite de caracteres (`maxLength` no front + `CHECK` no banco)
-- **#19** — permite meta com prazo já vencido (validar data futura)
+- **[Médio] `payCCInvoice` e `confirmTransaction` atualizam o estado local mesmo se o UPDATE no banco falhar.** O `.update(...).in("id", installmentIds)` não checa erro; o `setData` marca como pago na UI independentemente. Em caso de falha, a tela mostra "pago" mas o banco não. Capturar o erro, reverter o estado e exibir toast.
 
-> Padrão a seguir: todo input de valor bloqueia negativos e texto; todo bloqueio de submit mostra mensagem clara (toast ou erro inline); campos de data validam preenchimento e, quando aplicável, data futura.
+- **[Baixo] `getInvoiceWindow` virou código morto** — nenhum componente a chama. Candidata a remoção (ver regra técnica #8).
+
+- **[Baixo] `selectedMonth` é prop não usado em `CreditCardChart`** — o gráfico ignora o mês selecionado no dashboard e sempre mostra a fatura ativa. Confirmar se é o comportamento desejado.
 
 ### Lotes entregues
 
+- **Lote A** — Validação de inputs (`lib/validation.ts`): **#10, #13, #14, #15, #17, #19, #24, #25, #26, #27** ✓
 - **Lote B** — Overflow de UI (`truncate` + `min-w-0`): **#2, #7, #9, #20, #21, #22** ✓
 - **Lote C** — Erro de FK no F5 (**#1**) + limite de cartão (**#16**) + cotação de investimento (**#23**) ✓
 - **Lote D** — Idempotência de confirmação (**#12**) + IA (**#6**) + gráfico eixo Y (**#8**) ✓
 - **Lote E** — Excluir conta (**#28**) + termos (**#29**) + e-mail (**#30, #31**) ✓
 - **Lote F** — Paginação "Mostrar mais" (**#3, #4**) + query de `profiles` movida para `Promise.all` (**#5, #11**) ✓
-
-> **Pendência Lote E:** `SUPABASE_SERVICE_ROLE_KEY` deve ser adicionada às env vars da Vercel para que a exclusão de conta funcione em produção (Settings > Environment Variables).
-> **Pendência Lote C (migração 016):** Executar `supabase/migrations/016_consultant_fk.sql` no Supabase SQL Editor para adicionar a FK em `consultant_clients`.
