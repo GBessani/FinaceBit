@@ -53,13 +53,6 @@ export function localDateStr(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
 }
 
-export function getInvoiceWindow(closingDay: number): { from: string; to: string } {
-  const today = new Date()
-  const closeFrom = new Date(today.getFullYear(), today.getMonth() - 1, closingDay + 1)
-  const closeTo = new Date(today.getFullYear(), today.getMonth(), closingDay)
-  return { from: localDateStr(closeFrom), to: localDateStr(closeTo) }
-}
-
 /**
  * Dado o YYYY-MM-DD da compra e o dia de fechamento do cartão, retorna o
  * YYYY-MM da fatura em que essa compra (1ª parcela) cai.

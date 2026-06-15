@@ -500,6 +500,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const closingDay = card?.closingDay ?? 1
     const firstInvoiceMonth = getInvoiceMonth(purchase.purchaseDate, closingDay)
 
+    const baseAmount = Math.round((purchase.totalAmount / installments) * 100) / 100
+    const lastAmount = Math.round((purchase.totalAmount - baseAmount * (installments - 1)) * 100) / 100
+
     const instRows = []
     for (let i = 1; i <= installments; i++) {
       const dueMonth = addMonthsToInvoiceMonth(firstInvoiceMonth, i - 1)
@@ -507,7 +510,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         purchase_id: pRow.id, user_id: userId,
         credit_card_id: purchase.creditCardId,
         installment_num: i, due_month: dueMonth,
-        amount: Math.round((purchase.totalAmount / installments) * 100) / 100,
+        amount: i === installments ? lastAmount : baseAmount,
         is_paid: false,
       })
     }
@@ -571,7 +574,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (!txRow) return
 
     // Marca exatamente as parcelas exibidas como pagas (por ID, não por mês)
-    await supabase
+    const { error: updateError } = await supabase
       .from("credit_card_installments")
       .update({
         is_paid: true,
@@ -579,6 +582,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         transaction_id: txRow.id,
       })
       .in("id", installmentIds)
+
+    if (updateError) {
+      await supabase.from("transactions").delete().eq("id", txRow.id)
+      toast.error("Erro ao registrar pagamento. Tente novamente.")
+      return
+    }
 
     // Atualiza o estado local com os mesmos IDs
     setData(prev => ({
@@ -602,7 +611,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const confirmTransaction = React.useCallback(async (id: string) => {
-    await supabase.from("transactions").update({ status: "completed" }).eq("id", id)
+    const { error } = await supabase.from("transactions").update({ status: "completed" }).eq("id", id)
+    if (error) { toast.error("Erro ao confirmar transação."); return }
     setData(prev => ({
       ...prev,
       transactions: prev.transactions.map(t => t.id === id ? { ...t, status: "completed" as const } : t)

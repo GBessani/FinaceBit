@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatCurrency, localDateStr, getInvoiceWindow } from "../lib/utils"
+import { formatCurrency, localDateStr } from "../lib/utils"
 
 describe("formatCurrency", () => {
   it("formata valor positivo", () => {
@@ -36,22 +36,3 @@ describe("localDateStr", () => {
   })
 })
 
-describe("getInvoiceWindow", () => {
-  it("retorna strings no formato YYYY-MM-DD", () => {
-    const { from, to } = getInvoiceWindow(10)
-    expect(from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(to).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-  })
-
-  it("from é antes de to", () => {
-    const { from, to } = getInvoiceWindow(10)
-    expect(from < to).toBe(true)
-  })
-
-  it("janela tem ~30 dias", () => {
-    const { from, to } = getInvoiceWindow(15)
-    const diff = (new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24)
-    expect(diff).toBeGreaterThan(25)
-    expect(diff).toBeLessThan(35)
-  })
-})

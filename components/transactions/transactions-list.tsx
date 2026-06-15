@@ -210,6 +210,9 @@ export function TransactionsList() {
       await updateTransaction({ ...editingTx, ...form, amount: parseFloat(form.amount), status })
       toast.success("Transação atualizada!")
     } else if (installments > 1) {
+      const totalAmount = parseFloat(form.amount)
+      const baseInstallment = Math.round((totalAmount / installments) * 100) / 100
+      const lastInstallment = Math.round((totalAmount - baseInstallment * (installments - 1)) * 100) / 100
       for (let i = 1; i <= installments; i++) {
         const [y, m, d] = form.date.split("-").map(Number)
         const instDate = new Date(y, m - 1 + (i - 1), d)
@@ -218,7 +221,7 @@ export function TransactionsList() {
         await addTransaction({
           id: crypto.randomUUID(),
           description: `${form.description} (${i}/${installments})`,
-          amount: Math.round((parseFloat(form.amount) / installments) * 100) / 100,
+          amount: i === installments ? lastInstallment : baseInstallment,
           type: form.type,
           categoryId: form.categoryId,
           date: instDateStr,
