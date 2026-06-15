@@ -78,13 +78,13 @@ export function UpcomingOverview() {
                 const category = getCategory(bill.categoryId)
                 const daysUntil = getDaysUntilDue(bill.dueDay)
                 return (
-                  <div key={bill.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div key={bill.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {category && (
                         <CategoryIcon icon={category.icon} color={category.color} size={14} />
                       )}
-                      <div>
-                        <p className="text-sm font-medium">{bill.description}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{bill.description}</p>
                         <p className="text-xs text-muted-foreground">Dia {bill.dueDay}</p>
                       </div>
                     </div>
@@ -135,13 +135,13 @@ export function UpcomingOverview() {
                 const category = getCategory(transaction.categoryId)
                 const status = getScheduledStatus(transaction.date)
                 return (
-                  <div key={transaction.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div key={transaction.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {category && (
                         <CategoryIcon icon={category.icon} color={category.color} size={14} />
                       )}
-                      <div>
-                        <p className="text-sm font-medium">{transaction.description}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{transaction.description}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(parseISO(transaction.date), "dd MMM", { locale: ptBR })}
                         </p>

@@ -50,7 +50,7 @@ export function RecentTransactions() {
                 key={transaction.id}
                 className="flex items-center justify-between px-3 py-2.5 hover:bg-secondary/50 rounded-lg transition-colors group"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
                     className="p-1.5 rounded-lg shrink-0"
                     style={{ backgroundColor: `${category?.color}20` }}
@@ -61,9 +61,9 @@ export function RecentTransactions() {
                       size={16}
                     />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm leading-tight">{transaction.description}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm leading-tight truncate">{transaction.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">
                       {category?.name} • {formatDate(transaction.date)}
                     </p>
                   </div>

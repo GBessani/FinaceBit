@@ -85,7 +85,7 @@ export function CategoriesList() {
               <CategoryIcon icon={category.icon} color={category.color} size={20} />
             </div>
 
-            <p className="font-medium text-sm">{category.name}</p>
+            <p className="font-medium text-sm truncate">{category.name}</p>
           </div>
         ))}
       </div>
@@ -224,12 +224,12 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
           <div className="pt-2">
             <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
               <div
-                className="p-2 rounded-lg"
+                className="p-2 rounded-lg shrink-0"
                 style={{ backgroundColor: `${color}20` }}
               >
                 <CategoryIcon icon={icon} color={color} size={20} />
               </div>
-              <span className="font-medium">{name || "Nome da categoria"}</span>
+              <span className="font-medium truncate min-w-0">{name || "Nome da categoria"}</span>
             </div>
           </div>
 

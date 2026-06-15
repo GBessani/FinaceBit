@@ -70,13 +70,13 @@ export default function InvestimentosPage() {
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-secondary rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-2 bg-secondary rounded-lg shrink-0">
                       {inv.assetType === "crypto" ? <Bitcoin className="h-5 w-5" /> : <LineChart className="h-5 w-5" />}
                     </div>
-                    <div>
-                      <p className="font-semibold">{inv.name}</p>
-                      <p className="text-xs text-muted-foreground uppercase">{inv.ticker} • {inv.quantity} un.</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{inv.name}</p>
+                      <p className="text-xs text-muted-foreground uppercase truncate">{inv.ticker} • {inv.quantity} un.</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -126,9 +126,9 @@ export default function InvestimentosPage() {
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold">{inv.name}</p>
-                    <p className="text-xs text-muted-foreground">{inv.rateIndex === "prefixado" ? `${inv.rate}% a.a. prefixado` : `${inv.rate}% do ${inv.rateIndex}`}{inv.maturityDate && ` • Vence ${new Date(inv.maturityDate + "T00:00:00").toLocaleDateString("pt-BR")}`}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate">{inv.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{inv.rateIndex === "prefixado" ? `${inv.rate}% a.a. prefixado` : `${inv.rate}% do ${inv.rateIndex}`}{inv.maturityDate && ` • Vence ${new Date(inv.maturityDate + "T00:00:00").toLocaleDateString("pt-BR")}`}</p>
                     {inv.investedAt && <p className="text-xs text-muted-foreground">Aplicado em {new Date(inv.investedAt + "T00:00:00").toLocaleDateString("pt-BR")} ({formatDays(days)})</p>}
                   </div>
                   <div className="text-right shrink-0">
@@ -174,11 +174,11 @@ export default function InvestimentosPage() {
             return (
               <div key={inv.id} className="bg-card border border-border rounded-xl p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><PiggyBank className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></div>
-                    <div>
-                      <p className="font-semibold">{inv.name}</p>
-                      <p className="text-xs text-muted-foreground">{inv.rateIndex === "prefixado" ? `${inv.rate}% a.a.` : `${inv.rate}% do ${inv.rateIndex}`}{inv.investedAt && ` • Desde ${new Date(inv.investedAt + "T00:00:00").toLocaleDateString("pt-BR")}`}</p>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg shrink-0"><PiggyBank className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></div>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{inv.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{inv.rateIndex === "prefixado" ? `${inv.rate}% a.a.` : `${inv.rate}% do ${inv.rateIndex}`}{inv.investedAt && ` • Desde ${new Date(inv.investedAt + "T00:00:00").toLocaleDateString("pt-BR")}`}</p>
                     </div>
                   </div>
                   <div className="text-right">
