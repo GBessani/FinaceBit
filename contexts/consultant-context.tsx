@@ -42,17 +42,17 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
 
   async function loadProfile() {
     if (!user) return
+    try {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+      const userRole = profile?.role || "user"
+      setRole(userRole)
 
-    // Busca perfil
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-    const userRole = profile?.role || "user"
-    setRole(userRole)
-
-    if (userRole === "consultant") {
-      await loadClients()
-    } else {
-      await loadMyConsultant()
-    }
+      if (userRole === "consultant") {
+        await loadClients()
+      } else {
+        await loadMyConsultant()
+      }
+    } catch {}
   }
 
   async function loadClients() {
@@ -71,17 +71,24 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
   }
 
   async function loadMyConsultant() {
-    const { data } = await supabase
-      .from("consultant_clients")
-      .select("status, profiles!consultant_id(name, email)")
-      .eq("client_id", user!.id)
-      .eq("status", "active")
-      .single()
+    try {
+      const { data: rel } = await supabase
+        .from("consultant_clients")
+        .select("consultant_id")
+        .eq("client_id", user!.id)
+        .eq("status", "active")
+        .single()
 
-    if (data) {
-      const profile: any = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles
-      if (profile) setMyConsultant({ name: profile.name, email: profile.email })
-    }
+      if (!rel?.consultant_id) return
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", rel.consultant_id)
+        .single()
+
+      if (profile) setMyConsultant({ name: (profile as any).name || "Consultor", email: (profile as any).email || "" })
+    } catch {}
   }
 
   async function revokeConsultant() {

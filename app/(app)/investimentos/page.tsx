@@ -58,8 +58,9 @@ export default function InvestimentosPage() {
               <p className="text-sm text-muted-foreground">Adicione ações, FIIs, ETFs ou criptomoedas</p>
             </div>
           ) : variableInvestments.map(inv => {
-            const cp = prices[inv.ticker]?.price || inv.avgPrice
-            const change24h = prices[inv.ticker]?.change24h || 0
+            const hasPriceData = !!prices[inv.ticker]
+            const cp = hasPriceData ? prices[inv.ticker].price : inv.avgPrice
+            const change24h = hasPriceData ? prices[inv.ticker].change24h : 0
             const invTxs = data.investmentTransactions.filter(t => t.investmentId === inv.id)
             const stats = invTxs.length > 0 ? calcPortfolioStats(invTxs, cp, inv.assetType) : null
             const currentValue = stats ? stats.quantity * cp : inv.quantity * cp
@@ -80,17 +81,26 @@ export default function InvestimentosPage() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-lg">{formatCurrency(currentValue)}</p>
-                    <p className={`text-sm font-medium ${change24h >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                      {change24h >= 0 ? "▲" : "▼"} {Math.abs(change24h).toFixed(2)}% 24h
-                    </p>
+                    {hasPriceData ? (
+                      <>
+                        <p className="font-bold text-lg">{formatCurrency(currentValue)}</p>
+                        <p className={`text-sm font-medium ${change24h >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                          {change24h >= 0 ? "▲" : "▼"} {Math.abs(change24h).toFixed(2)}% 24h
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold text-lg text-muted-foreground">—</p>
+                        <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">Sem cotação</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-muted-foreground text-xs">Investido</p><p className="font-medium">{formatCurrency(inv.investedAmount ?? 0)}</p></div>
-                  <div><p className="text-muted-foreground text-xs">Lucro Bruto</p><p className={`font-medium ${profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{profit >= 0 ? "+" : ""}{formatCurrency(profit)}</p></div>
-                  <div><p className="text-muted-foreground text-xs flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> IR ({irLabel(irRate)})</p><p className="font-medium text-amber-600 dark:text-amber-400">{irAmount > 0 ? `-${formatCurrency(irAmount)}` : "—"}</p></div>
-                  <div><p className="text-muted-foreground text-xs">Lucro Líquido</p><p className={`font-bold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{netProfit >= 0 ? "+" : ""}{formatCurrency(netProfit)}</p></div>
+                  <div><p className="text-muted-foreground text-xs">Lucro Bruto</p><p className={`font-medium ${!hasPriceData ? "text-muted-foreground" : profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{hasPriceData ? `${profit >= 0 ? "+" : ""}${formatCurrency(profit)}` : "—"}</p></div>
+                  <div><p className="text-muted-foreground text-xs flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> IR ({irLabel(irRate)})</p><p className="font-medium text-amber-600 dark:text-amber-400">{hasPriceData && irAmount > 0 ? `-${formatCurrency(irAmount)}` : "—"}</p></div>
+                  <div><p className="text-muted-foreground text-xs">Lucro Líquido</p><p className={`font-bold ${!hasPriceData ? "text-muted-foreground" : netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{hasPriceData ? `${netProfit >= 0 ? "+" : ""}${formatCurrency(netProfit)}` : "—"}</p></div>
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setTxModalId(inv.id)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 transition-colors"><Clock className="h-3.5 w-3.5" /> Movimentações</button>

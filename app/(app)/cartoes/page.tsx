@@ -99,6 +99,16 @@ export default function CartoesPage() {
     if (!purchaseForm.categoryId) errs.categoryId = "Selecione uma categoria"
     if (Object.keys(errs).length > 0) { setPurchaseErrors(errs); return }
 
+    const card = data.creditCards.find(c => c.id === cardId)
+    if (card && card.limitAmount > 0) {
+      const stats = cardData.find(cd => cd.card.id === cardId)
+      const pendingTotal = stats ? stats.allInstallments.reduce((s, i) => s + i.amount, 0) : 0
+      const purchaseAmount = parseFloat(purchaseForm.amount)
+      if (pendingTotal + purchaseAmount > card.limitAmount) {
+        toast.warning(`Limite excedido! Esta compra ultrapassa o limite de ${formatCurrency(card.limitAmount)}.`)
+      }
+    }
+
     const installments = parseInt(purchaseForm.installments) || 1
     await addCCPurchase({
       creditCardId: cardId,
@@ -197,22 +207,39 @@ export default function CartoesPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Fatura {(() => { const [y, m] = activeMonth.split("-").map(Number); return new Date(y, m - 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) })()}</p>
-                    <p className="text-3xl font-bold">{formatCurrency(invoiceTotal)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{currentInstallments.length} item{currentInstallments.length !== 1 ? "s" : ""} nesta fatura</p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    <p>Limite: {formatCurrency(card.limitAmount)}</p>
-                    <p>Total pendente: {formatCurrency(allInstallments.reduce((s,i)=>s+i.amount,0))}</p>
-                  </div>
-                </div>
+                {(() => {
+                  const pendingTotal = allInstallments.reduce((s, i) => s + i.amount, 0)
+                  const isOverLimit = card.limitAmount > 0 && pendingTotal > card.limitAmount
+                  return (
+                    <div className="mt-4 flex items-end justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Fatura {(() => { const [y, m] = activeMonth.split("-").map(Number); return new Date(y, m - 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) })()}</p>
+                        <p className="text-3xl font-bold">{formatCurrency(invoiceTotal)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{currentInstallments.length} item{currentInstallments.length !== 1 ? "s" : ""} nesta fatura</p>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        <p>Limite: {formatCurrency(card.limitAmount)}</p>
+                        <p className={isOverLimit ? "text-red-400 font-semibold" : ""}>
+                          Total pendente: {formatCurrency(pendingTotal)}
+                        </p>
+                        {isOverLimit && (
+                          <p className="flex items-center justify-end gap-1 text-red-400 font-medium mt-0.5">
+                            <AlertTriangle className="h-3 w-3" />
+                            Limite excedido
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {card.limitAmount > 0 && (
                   <div className="mt-3 w-full bg-black/20 rounded-full h-1.5">
-                    <div className="h-full rounded-full bg-white/80 transition-all"
-                      style={{ width: `${Math.min((invoiceTotal/card.limitAmount)*100, 100)}%` }} />
+                    <div className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min((allInstallments.reduce((s,i)=>s+i.amount,0)/card.limitAmount)*100, 100)}%`,
+                        backgroundColor: allInstallments.reduce((s,i)=>s+i.amount,0) > card.limitAmount ? '#ef4444' : 'rgba(255,255,255,0.8)'
+                      }} />
                   </div>
                 )}
               </div>
