@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { ArrowLeftRight, X, Building2, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { generateId, localDateStr } from "@/lib/utils"
+import { localDateStr } from "@/lib/utils"
 
 type Direction = "to_cash" | "to_digital"
 
@@ -36,7 +36,7 @@ export function TransferForm({ onClose }: TransferFormProps) {
     setLoading(true)
     try {
       await addTransaction({
-        id: generateId(),
+        id: crypto.randomUUID(),
         description: `Transferência: ${fromLabel} → ${toLabel}`,
         amount: parseFloat(amount),
         type: "transfer",

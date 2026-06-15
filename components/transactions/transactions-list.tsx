@@ -223,7 +223,6 @@ export function TransactionsList() {
           categoryId: form.categoryId,
           date: instDateStr,
           wallet: form.wallet,
-          notes: form.type,
           status: instStatus,
           installmentNumber: i,
           totalInstallments: installments,

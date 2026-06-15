@@ -28,7 +28,7 @@ export default function OrcamentoPage() {
   const spentByCategory = useMemo(() => {
     const map: Record<string, number> = {}
     data.transactions
-      .filter(t => t.type === "expense" && t.date.startsWith(currentMonth))
+      .filter(t => t.type === "expense" && t.status !== "pending" && t.date.startsWith(currentMonth))
       .forEach(t => {
         map[t.categoryId] = (map[t.categoryId] || 0) + t.amount
       })

@@ -50,8 +50,8 @@ export default function PerfilPage() {
     : "—"
 
   const totalTransactions = data.transactions.length
-  const totalIncome = data.transactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = data.transactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const totalIncome = data.transactions.filter(t => t.type === "income" && t.status !== "pending").reduce((s, t) => s + t.amount, 0)
+  const totalExpenses = data.transactions.filter(t => t.type === "expense" && t.status !== "pending").reduce((s, t) => s + t.amount, 0)
 
   async function activateConsultantCode() {
     if (!consultantCode) return

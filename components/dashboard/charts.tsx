@@ -17,7 +17,7 @@ export function ExpenseChart({ selectedMonth }: { selectedMonth?: string } = {})
 
     // Transações manuais do mês
     data.transactions
-      .filter(t => t.type === "expense" && t.date.startsWith(currentMonth))
+      .filter(t => t.type === "expense" && t.status !== "pending" && t.date.startsWith(currentMonth))
       .forEach(t => {
         const cat = getCategory(t.categoryId)
         const name = cat?.name || "Outros"

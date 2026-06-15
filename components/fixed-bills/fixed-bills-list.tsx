@@ -118,7 +118,7 @@ export function FixedBillsList() {
     try {
       const today = localDateStr()
       await addTransaction({
-        id: "",
+        id: crypto.randomUUID(),
         description: bill.description,
         amount: bill.amount,
         type: bill.type as "income" | "expense",
