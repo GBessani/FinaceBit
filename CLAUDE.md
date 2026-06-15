@@ -218,10 +218,13 @@ Resolve: **#10, #13, #14, #15, #17, #24, #25, #26, #27** e parte do **#19**.
 
 > Padrão a seguir: todo input de valor bloqueia negativos e texto; todo bloqueio de submit mostra mensagem clara (toast ou erro inline); campos de data validam preenchimento e, quando aplicável, data futura.
 
-### Demais lotes (em ordem)
+### Lotes entregues
 
-- **Lote B** — Overflow de UI (`truncate` + `min-w-0`): **#2, #7, #9, #20, #21, #22**
-- **Lote C** — Erro de FK no F5 (**#1**) + limite de cartão (**#16**) + cotação de investimento (**#23**)
-- **Lote D** — Idempotência de confirmação (**#12**) + IA (**#6**) + gráfico eixo Y (**#8**)
-- **Lote E** — Excluir conta (**#28**) + termos (**#29**) + e-mail (**#30, #31**)
-- **Lote F** — Escala: paginação (**#3, #4**), consolidar requests (**#5, #11**) — o mais pesado, por último
+- **Lote B** — Overflow de UI (`truncate` + `min-w-0`): **#2, #7, #9, #20, #21, #22** ✓
+- **Lote C** — Erro de FK no F5 (**#1**) + limite de cartão (**#16**) + cotação de investimento (**#23**) ✓
+- **Lote D** — Idempotência de confirmação (**#12**) + IA (**#6**) + gráfico eixo Y (**#8**) ✓
+- **Lote E** — Excluir conta (**#28**) + termos (**#29**) + e-mail (**#30, #31**) ✓
+- **Lote F** — Paginação "Mostrar mais" (**#3, #4**) + query de `profiles` movida para `Promise.all` (**#5, #11**) ✓
+
+> **Pendência Lote E:** `SUPABASE_SERVICE_ROLE_KEY` deve ser adicionada às env vars da Vercel para que a exclusão de conta funcione em produção (Settings > Environment Variables).
+> **Pendência Lote C (migração 016):** Executar `supabase/migrations/016_consultant_fk.sql` no Supabase SQL Editor para adicionar a FK em `consultant_clients`.

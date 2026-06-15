@@ -41,6 +41,7 @@ export function TransactionsList() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState<"all" | TransactionType>("all")
+  const [visibleCount, setVisibleCount] = useState(30)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -51,6 +52,10 @@ export function TransactionsList() {
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
+
+  useEffect(() => {
+    setVisibleCount(30)
+  }, [activeTab, search, filterType, selectedMonth])
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>()
@@ -260,6 +265,8 @@ export function TransactionsList() {
   ]
 
   const currentList = activeTab === "pending" ? pending : activeTab === "overdue" ? overdue : completed
+  const visibleList = currentList.slice(0, visibleCount)
+  const hasMore = currentList.length > visibleCount
 
   // Cartão selecionado (para exibir cor/nome no preview)
   const selectedCard = creditCards.find(c => c.id === form.cardId)
@@ -373,7 +380,7 @@ export function TransactionsList() {
         </div>
       ) : (
         <div className="space-y-2">
-          {currentList.map(tx => {
+          {visibleList.map(tx => {
             const category = getCategory(tx.categoryId)
             return (
               <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
@@ -431,6 +438,14 @@ export function TransactionsList() {
               </div>
             )
           })}
+          {hasMore && (
+            <button
+              onClick={() => setVisibleCount(c => c + 30)}
+              className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl hover:bg-secondary transition-colors"
+            >
+              Mostrar mais ({currentList.length - visibleCount} restantes)
+            </button>
+          )}
         </div>
       )}
 

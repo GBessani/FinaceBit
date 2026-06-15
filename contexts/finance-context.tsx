@@ -192,7 +192,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [initialBalance, setInitialBalanceState] = React.useState(0)
 
   const loadData = React.useCallback(async (userId: string) => {
-    const [cats, txs, goals, bills, invs, cards, invTxs, budgets, ccPurchases, ccInstallments] = await Promise.all([
+    const [cats, txs, goals, bills, invs, cards, invTxs, budgets, ccPurchases, ccInstallments, profileResult] = await Promise.all([
       supabase.from("categories").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", userId).order("created_at"),
@@ -203,6 +203,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       supabase.from("budgets").select("*").eq("user_id", userId),
       supabase.from("credit_card_purchases").select("*").eq("user_id", userId).order("purchase_date", { ascending: false }),
       supabase.from("credit_card_installments").select("*, credit_card_purchases(*)").eq("user_id", userId),
+      supabase.from("profiles").select("initial_balance").eq("id", userId).single(),
     ])
 
     setData({
@@ -237,12 +238,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }),
     })
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("initial_balance")
-      .eq("id", userId)
-      .single()
-    if (profile?.initial_balance) setInitialBalanceState(Number(profile.initial_balance))
+    if (profileResult.data?.initial_balance) setInitialBalanceState(Number(profileResult.data.initial_balance))
 
     setIsLoaded(true)
   }, [supabase])
