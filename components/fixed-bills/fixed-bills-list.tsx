@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { CategoryIcon } from "@/components/categories/category-icon"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, localDateStr } from "@/lib/utils"
+import { validateAmount, parseAmount } from "@/lib/validation"
 import { Plus, Trash2, Edit, RefreshCw, Calendar, Pause, Play, CheckCircle } from "lucide-react"
 
 const recurrenceLabels: Record<RecurrenceType, string> = {
@@ -82,8 +83,8 @@ export function FixedBillsList() {
     e.preventDefault()
     const errs: Record<string, string> = {}
     if (!description.trim()) errs.description = "Descrição é obrigatória"
-    if (!amount) errs.amount = "Valor é obrigatório"
-    else if (parseFloat(amount) <= 0) errs.amount = "Valor deve ser maior que zero"
+    const amtErr = validateAmount(amount)
+    if (amtErr) errs.amount = amtErr
     if (!dueDay) errs.dueDay = "Dia de vencimento é obrigatório"
     else if (parseInt(dueDay) < 1 || parseInt(dueDay) > 31) errs.dueDay = "Dia deve ser entre 1 e 31"
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
@@ -91,7 +92,7 @@ export function FixedBillsList() {
     const billData: FixedBill = {
       id: editingBill?.id || "",
       description,
-      amount: parseFloat(amount),
+      amount: parseAmount(amount)!,
       type,
       categoryId,
       dueDay: parseInt(dueDay),
@@ -111,7 +112,7 @@ export function FixedBillsList() {
   }
 
   const confirmBill = async (bill: FixedBill) => {
-    const today = new Date().toISOString().split("T")[0]
+    const today = localDateStr()
     await addTransaction({
       id: "",
       description: bill.description,
@@ -202,6 +203,7 @@ export function FixedBillsList() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ex: Aluguel, Netflix, Salário..."
+                  maxLength={100}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

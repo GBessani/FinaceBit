@@ -81,11 +81,12 @@ export function InvestmentForm({ tab, setTab, editingId, varForm, setVarForm, fi
                     </button>
                   ))}
                 </div>
-                <input type="number" step="0.01" value={fixForm.rate}
+                <input type="number" step="0.01" min="0" value={fixForm.rate}
                   onChange={e => setFixForm((p: any) => ({ ...p, rate: e.target.value, rateIndex: "CDI" }))}
                   placeholder="Ex: 110"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                {fixForm.rate && <p className="text-xs text-muted-foreground mt-1">= {((parseFloat(fixForm.rate) / 100) * 10.65).toFixed(2)}% a.a. efetivo</p>}
+                {errors.rate && <p className="text-xs text-red-500 mt-1">{errors.rate}</p>}
+                {!errors.rate && fixForm.rate && <p className="text-xs text-muted-foreground mt-1">= {((parseFloat(fixForm.rate) / 100) * 10.65).toFixed(2)}% a.a. efetivo</p>}
               </div>
             </>
           ) : tab === "variable" ? (
@@ -178,8 +179,9 @@ export function InvestmentForm({ tab, setTab, editingId, varForm, setVarForm, fi
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">{fixForm.rateIndex === "prefixado" ? "Taxa a.a. (%)" : `% do ${fixForm.rateIndex}`}</label>
                   <input value={fixForm.rate} onChange={e => setFixForm((p: any) => ({ ...p, rate: e.target.value }))}
-                    placeholder={fixForm.rateIndex === "prefixado" ? "12,5" : "110"} type="text"
+                    placeholder={fixForm.rateIndex === "prefixado" ? "12,5" : "110"} type="number" min="0" step="0.01"
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  {errors.rate && <p className="text-xs text-red-500 mt-1">{errors.rate}</p>}
                 </div>
               </div>
               <div>

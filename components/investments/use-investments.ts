@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Investment, AssetType, FixedIncomeIndex } from "@/lib/types"
 import { calcFixedIncomeYield, calcPortfolioStats, calcSavingsBoxYield, formatDays } from "@/lib/investment-calc"
+import { localDateStr } from "@/lib/utils"
+import { validateAmount, validateDate, parseAmount } from "@/lib/validation"
 import { toast } from "sonner"
 
 export type Tab = "variable" | "fixed" | "savings"
@@ -28,7 +30,7 @@ export function useInvestments() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [txModalId, setTxModalId] = useState<string | null>(null)
-  const [txForm, setTxForm] = useState({ type: "buy" as "buy" | "sell", quantity: "", price: "", date: new Date().toISOString().split("T")[0], notes: "" })
+  const [txForm, setTxForm] = useState({ type: "buy" as "buy" | "sell", quantity: "", price: "", date: localDateStr(), notes: "" })
   const [txDeleteId, setTxDeleteId] = useState<string | null>(null)
   const [prices, setPrices] = useState<PriceMap>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
@@ -64,11 +66,14 @@ export function useInvestments() {
 
   async function saveTx() {
     if (!txModalId) return
-    const qty = parseFloat(txForm.quantity.replace(",", "."))
-    const price = parseFloat(txForm.price.replace(",", "."))
-    if (!qty || !price) { toast.error("Informe quantidade e preço"); return }
+    const qty = parseAmount(txForm.quantity.replace(",", "."))
+    const price = parseAmount(txForm.price.replace(",", "."))
+    if (!qty || qty <= 0) { toast.error("Quantidade deve ser maior que zero"); return }
+    if (!price || price <= 0) { toast.error("Preço deve ser maior que zero"); return }
+    const dateErr = validateDate(txForm.date, "Data")
+    if (dateErr) { toast.error(dateErr); return }
     await addInvestmentTransaction({ investmentId: txModalId, type: txForm.type, quantity: qty, price, total: qty * price, date: txForm.date, notes: txForm.notes || undefined })
-    setTxForm({ type: "buy", quantity: "", price: "", date: new Date().toISOString().split("T")[0], notes: "" })
+    setTxForm({ type: "buy", quantity: "", price: "", date: localDateStr(), notes: "" })
   }
 
   function onTickerChange(ticker: string) {
@@ -110,29 +115,36 @@ export function useInvestments() {
   }
 
   async function saveVariable() {
-    const qty = parseFloat(varForm.quantity.replace(",", "."))
+    const qty = parseAmount(varForm.quantity.replace(",", "."))
     const currentPrice = prices[varForm.ticker]?.price
-    const investedAmount = parseFloat(priceInput.replace(",", ".")) || (qty * (currentPrice || 0))
+    const investedAmount = parseAmount(priceInput.replace(",", ".")) ?? ((qty ?? 0) * (currentPrice || 0))
     const errs: Record<string, string> = {}
     if (!varForm.ticker.trim()) errs.ticker = "Ticker é obrigatório"
     if (!varForm.name.trim()) errs.name = "Nome é obrigatório"
     if (!qty || qty <= 0) errs.quantity = "Quantidade deve ser maior que zero"
-    if (!priceInput || parseFloat(priceInput) <= 0) errs.price = "Valor investido deve ser maior que zero"
+    const priceErr = validateAmount(priceInput, "Valor investido")
+    if (priceErr) errs.price = priceErr
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    const payload: Investment = { id: editingId || "", name: varForm.name, ticker: varForm.ticker, assetType: varForm.assetType, quantity: qty, avgPrice: investedAmount / qty, investedAmount, investedAt: varForm.investedAt || new Date().toISOString().split("T")[0] }
+    const safeQty = qty!
+    const payload: Investment = { id: editingId || "", name: varForm.name, ticker: varForm.ticker, assetType: varForm.assetType, quantity: safeQty, avgPrice: investedAmount / safeQty, investedAmount, investedAt: varForm.investedAt || localDateStr() }
     if (editingId) await updateInvestment(payload)
     else await addInvestment(payload)
     setShowForm(false); setEditingId(null); setVarForm(emptyVariable); setPriceInput("")
   }
 
   async function saveFixed() {
-    const amount = parseFloat(fixForm.investedAmount.replace(",", "."))
+    const amount = parseAmount(fixForm.investedAmount.replace(",", "."))
     const errs: Record<string, string> = {}
     if (!fixForm.name) errs.name = "Selecione o tipo"
-    if (!fixForm.investedAmount || amount <= 0) errs.investedAmount = "Valor deve ser maior que zero"
-    if (!fixForm.investedAt) errs.investedAt = "Data de aplicação é obrigatória"
+    const amtErr = validateAmount(fixForm.investedAmount, "Valor")
+    if (amtErr) errs.investedAmount = amtErr
+    const dateErr = validateDate(fixForm.investedAt, "Data de aplicação")
+    if (dateErr) errs.investedAt = dateErr
+    const rate = parseAmount(fixForm.rate)
+    if (rate !== null && rate < 0) errs.rate = "Taxa não pode ser negativa"
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    const payload: Investment = { id: editingId || "", name: fixForm.name, ticker: fixForm.name.toUpperCase().replace(/\s/g, "_"), assetType: (tab === "savings" ? "savings_box" : "fixed_income") as AssetType, quantity: 1, avgPrice: amount, investedAmount: amount, investedAt: fixForm.investedAt, rate: parseFloat(fixForm.rate), rateIndex: fixForm.rateIndex, maturityDate: fixForm.maturityDate || undefined }
+    const safeAmount = amount!
+    const payload: Investment = { id: editingId || "", name: fixForm.name, ticker: fixForm.name.toUpperCase().replace(/\s/g, "_"), assetType: (tab === "savings" ? "savings_box" : "fixed_income") as AssetType, quantity: 1, avgPrice: safeAmount, investedAmount: safeAmount, investedAt: fixForm.investedAt, rate: rate ?? 0, rateIndex: fixForm.rateIndex, maturityDate: fixForm.maturityDate || undefined }
     if (editingId) await updateInvestment(payload)
     else await addInvestment(payload)
     setShowForm(false); setEditingId(null); setFixForm(emptyFixed)

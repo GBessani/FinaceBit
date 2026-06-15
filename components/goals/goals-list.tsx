@@ -4,7 +4,8 @@ import { useState } from "react"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { Goal } from "@/lib/types"
-import { generateId, formatCurrency } from "@/lib/utils"
+import { formatCurrency, localDateStr } from "@/lib/utils"
+import { validateAmount, validateFutureDate, parseAmount } from "@/lib/validation"
 import { Plus, Target, Trash2, X, Edit3, Check } from "lucide-react"
 
 export function GoalsList() {
@@ -180,9 +181,12 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
   const [name, setName] = useState(goal?.name || "")
   const [targetAmount, setTargetAmount] = useState(goal?.targetAmount.toString() || "")
   const [currentAmount, setCurrentAmount] = useState(goal?.currentAmount.toString() || "0")
-  const [deadline, setDeadline] = useState(
-    goal?.deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-  )
+  const [deadline, setDeadline] = useState(() => {
+    if (goal?.deadline) return goal.deadline
+    const d = new Date()
+    d.setDate(d.getDate() + 90)
+    return localDateStr(d)
+  })
   const [color, setColor] = useState(goal?.color || GOAL_COLORS[0])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -190,15 +194,17 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
     e.preventDefault()
     const errs: Record<string, string> = {}
     if (!name.trim()) errs.name = "Nome é obrigatório"
-    if (!targetAmount) errs.targetAmount = "Valor alvo é obrigatório"
-    else if (parseFloat(targetAmount) <= 0) errs.targetAmount = "Valor deve ser maior que zero"
+    const amtErr = validateAmount(targetAmount, "Valor alvo")
+    if (amtErr) errs.targetAmount = amtErr
+    const dlErr = validateFutureDate(deadline, "Prazo")
+    if (dlErr) errs.deadline = dlErr
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     onSubmit({
-      id: goal?.id || generateId(),
+      id: goal?.id || crypto.randomUUID(),
       name,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: parseFloat(currentAmount) || 0,
+      targetAmount: parseAmount(targetAmount)!,
+      currentAmount: parseAmount(currentAmount) ?? 0,
       deadline,
       color,
     })
@@ -227,9 +233,11 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Viagem de férias"
+              maxLength={100}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -244,6 +252,7 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
+            {errors.targetAmount && <p className="text-xs text-red-500 mt-1">{errors.targetAmount}</p>}
           </div>
 
           <div>
@@ -268,6 +277,7 @@ function GoalForm({ goal, onClose, onSubmit }: GoalFormProps) {
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
+            {errors.deadline && <p className="text-xs text-red-500 mt-1">{errors.deadline}</p>}
           </div>
 
           <div>

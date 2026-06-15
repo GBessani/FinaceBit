@@ -3,6 +3,7 @@
 import { useFinance } from "@/contexts/finance-context"
 import { CreditCard as CreditCardType, CreditCardInstallment } from "@/lib/types"
 import { formatCurrency, getActiveInvoiceMonth, localDateStr } from "@/lib/utils"
+import { validateAmount, parseAmount } from "@/lib/validation"
 import { useState, useMemo } from "react"
 import {
   CreditCard as CardIcon, Plus, Trash2, Pencil,
@@ -78,10 +79,13 @@ export default function CartoesPage() {
   }, [data.creditCards, data.ccInstallments, data.ccPurchases, currentMonthStr, today])
 
   async function saveCard() {
-    if (!cardForm.name || !cardForm.limitAmount || !cardForm.dueDay) { toast.error("Preencha todos os campos"); return }
+    if (!cardForm.name.trim()) { toast.error("Informe o nome do cartão"); return }
+    const limitErr = validateAmount(cardForm.limitAmount, "Limite")
+    if (limitErr) { toast.error(limitErr); return }
+    if (!cardForm.dueDay) { toast.error("Informe o dia de vencimento"); return }
     const dueDay = parseInt(cardForm.dueDay)
     const closingDay = dueDay - 7 <= 0 ? dueDay - 7 + 30 : dueDay - 7
-    const payload = { id: editingId || "", name: cardForm.name, limitAmount: parseFloat(cardForm.limitAmount), dueDay, closingDay, color: cardForm.color, isActive: true }
+    const payload = { id: editingId || "", name: cardForm.name, limitAmount: parseAmount(cardForm.limitAmount)!, dueDay, closingDay, color: cardForm.color, isActive: true }
     if (editingId) await updateCreditCard(payload)
     else await addCreditCard(payload)
     setShowCardForm(false); setEditingId(null); setCardForm(emptyCard)
@@ -391,6 +395,7 @@ export default function CartoesPage() {
               <label className="text-sm font-medium mb-1 block">Nome</label>
               <input value={cardForm.name} onChange={e => setCardForm(p => ({ ...p, name: e.target.value }))}
                 placeholder="Ex: Nubank, Itaú..."
+                maxLength={50}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div className="grid grid-cols-2 gap-3">

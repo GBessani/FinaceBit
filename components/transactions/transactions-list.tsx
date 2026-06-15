@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
+import { validateAmount, validateDate } from "@/lib/validation"
 import { format, parseISO, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -159,10 +160,11 @@ export function TransactionsList() {
 
     // ── Modo cartão ─────────────────────────────────────────────
     if (walletMode === "card") {
-      if (!form.description.trim() || !form.amount || parseFloat(form.amount) <= 0) {
-        toast.error("Preencha descrição e valor")
-        return
-      }
+      if (!form.description.trim()) { toast.error("Preencha a descrição"); return }
+      const amtErrCard = validateAmount(form.amount)
+      if (amtErrCard) { toast.error(amtErrCard); return }
+      const dateErrCard = validateDate(form.date, "Data da compra")
+      if (dateErrCard) { toast.error(dateErrCard); return }
       if (!form.cardId) {
         toast.error("Selecione um cartão")
         return
@@ -189,10 +191,11 @@ export function TransactionsList() {
     }
 
     // ── Transação normal ─────────────────────────────────────────
-    if (!form.description.trim() || !form.amount || parseFloat(form.amount) <= 0) {
-      toast.error("Preencha descrição e valor")
-      return
-    }
+    if (!form.description.trim()) { toast.error("Preencha a descrição"); return }
+    const amtErr = validateAmount(form.amount)
+    if (amtErr) { toast.error(amtErr); return }
+    const dateErr = validateDate(form.date)
+    if (dateErr) { toast.error(dateErr); return }
 
     const installments = parseInt(form.installments) || 1
     const groupId = installments > 1 ? crypto.randomUUID() : undefined
@@ -547,6 +550,7 @@ export function TransactionsList() {
                       value={form.description}
                       onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                       placeholder="Ex: Supermercado, Netflix..."
+                      maxLength={100}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
@@ -660,6 +664,7 @@ export function TransactionsList() {
                       value={form.description}
                       onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                       placeholder="Ex: Aluguel, Salário..."
+                      maxLength={100}
                       className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
