@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   User, Mail, Calendar, LogOut, Shield, Trash2,
   ChevronRight, ExternalLink, Camera, Loader2, Wallet, Pencil, Check, X as XIcon,
+  KeyRound, Eye, EyeOff,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useState, useRef, useEffect } from "react"
@@ -25,6 +26,10 @@ export default function PerfilPage() {
   const [editingBalance, setEditingBalance] = useState(false)
   const [balanceInput, setBalanceInput] = useState("")
   const [customAvatar, setCustomAvatar] = useState<string | null>(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ password: "", confirm: "" })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
@@ -134,6 +139,29 @@ export default function PerfilPage() {
     } finally {
       setUploading(false)
     }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (changingPassword) return
+    if (pwdForm.password.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres.")
+      return
+    }
+    if (pwdForm.password !== pwdForm.confirm) {
+      toast.error("As senhas não coincidem.")
+      return
+    }
+    setChangingPassword(true)
+    const { error } = await supabase.auth.updateUser({ password: pwdForm.password })
+    if (error) {
+      toast.error(error.message || "Erro ao alterar senha.")
+    } else {
+      toast.success("Senha alterada com sucesso!")
+      setShowPasswordModal(false)
+      setPwdForm({ password: "", confirm: "" })
+    }
+    setChangingPassword(false)
   }
 
   async function handleSignOut() {
@@ -435,6 +463,20 @@ export default function PerfilPage() {
           </a>
 
           <button
+            onClick={() => setShowPasswordModal(true)}
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-secondary/50 transition-colors"
+          >
+            <div className="p-2 bg-secondary rounded-lg">
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium">Alterar senha</p>
+              <p className="text-xs text-muted-foreground">Definir ou trocar a senha de acesso</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+
+          <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-5 py-4 hover:bg-secondary/50 transition-colors"
           >
@@ -463,6 +505,72 @@ export default function PerfilPage() {
           </button>
         </div>
       </div>
+
+      {/* Modal alterar senha */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Alterar senha</h3>
+              <button
+                onClick={() => { setShowPasswordModal(false); setPwdForm({ password: "", confirm: "" }) }}
+                className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Nova senha</label>
+                <div className="relative">
+                  <input
+                    value={pwdForm.password}
+                    onChange={e => setPwdForm(p => ({ ...p, password: e.target.value }))}
+                    type={showPwd ? "text" : "password"}
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                    className="w-full px-3 py-2.5 pr-10 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Confirmar nova senha</label>
+                <input
+                  value={pwdForm.confirm}
+                  onChange={e => setPwdForm(p => ({ ...p, confirm: e.target.value }))}
+                  type={showPwd ? "text" : "password"}
+                  placeholder="Repita a senha"
+                  required
+                  className="w-full px-3 py-2.5 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowPasswordModal(false); setPwdForm({ password: "", confirm: "" }) }}
+                  className="flex-1 px-4 py-2.5 border border-border rounded-lg hover:bg-secondary transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {changingPassword ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal confirmação de exclusão */}
       {showDeleteConfirm && (

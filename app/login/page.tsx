@@ -58,7 +58,7 @@ function LoginContent() {
     setLoading(true)
     setFeedback(null)
     const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/perfil`,
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=/redefinir-senha`,
     })
     if (error) {
       setFeedback({ type: "error", message: error.message })

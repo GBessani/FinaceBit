@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -31,7 +31,14 @@ export async function proxy(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login")
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback")
-  const isPublicPage = request.nextUrl.pathname.startsWith("/termos") || request.nextUrl.pathname.startsWith("/privacidade") || request.nextUrl.pathname.startsWith("/convite")
+  // /redefinir-senha precisa ser acessível para quem chega pelo link de
+  // recuperação (a sessão de PASSWORD_RECOVERY ainda não conta como "logado"
+  // no sentido normal e o usuário não deve ser barrado nem redirecionado).
+  const isPublicPage =
+    request.nextUrl.pathname.startsWith("/termos") ||
+    request.nextUrl.pathname.startsWith("/privacidade") ||
+    request.nextUrl.pathname.startsWith("/convite") ||
+    request.nextUrl.pathname.startsWith("/redefinir-senha")
 
   // Não logado e tentando acessar app → redireciona pro login
   if (!user && !isAuthPage && !isAuthCallback && !isPublicPage) {
