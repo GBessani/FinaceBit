@@ -365,32 +365,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }).select().single()
     if (row) {
       const newBill = mapFixedBill(row)
-
-      if (b.totalInstallments && b.startDate) {
-        const installments = []
-        for (let i = 0; i < b.totalInstallments; i++) {
-          const date = new Date(b.startDate)
-          date.setMonth(date.getMonth() + i)
-          const dateStr = localDateStr(date)
-          installments.push({
-            user_id: targetUserIdRef.current || user!.id,
-            description: `${b.description} (${i + 1}/${b.totalInstallments})`,
-            amount: b.amount,
-            type: b.type,
-            category_id: b.categoryId || null,
-            scheduled_date: dateStr,
-            is_completed: false,
-            notes: b.notes ?? null,
-            fixed_bill_id: row.id,
-            installment_number: i + 1,
-          })
-        }
-        await supabase.from("scheduled_transactions").insert(installments).select()
-        setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
-      } else {
-        setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
-        toast.success("Conta fixa salva!")
-      }
+      setData(prev => ({ ...prev, fixedBills: [...prev.fixedBills, newBill] }))
+      toast.success("Conta fixa salva!")
     }
   }, [user, supabase])
 
