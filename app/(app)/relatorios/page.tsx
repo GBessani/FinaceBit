@@ -67,9 +67,12 @@ export default function RelatoriosPage() {
     return { startDate: start.toISOString().split("T")[0], endDate: end }
   }, [preset, customStart, customEnd])
 
-  // Filtra transações pelo período
+  // Filtra transações pelo período.
+  // Exclui 'pending' (lançamentos futuros/a vencer): o relatório reflete o que
+  // de fato aconteceu, não previsões. Sem isso, parcelas futuras entram como
+  // despesa/receita real e inflam os totais do período.
   const filteredTransactions = useMemo(() =>
-    data.transactions.filter(t => t.date >= startDate && t.date <= endDate)
+    data.transactions.filter(t => t.status !== "pending" && t.date >= startDate && t.date <= endDate)
   , [data.transactions, startDate, endDate])
 
   // Compras de cartão pagas no período (pela data da compra)
