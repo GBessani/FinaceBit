@@ -142,7 +142,7 @@ export interface CreditCardInstallment {
   purchaseId: string
   creditCardId: string
   installmentNum: number
-  dueMonth: string // YYYY-MM
+  dueMonth: string // YYYY-MM-DD (dia sempre 01)
   amount: number
   isPaid: boolean
   paidAt?: string

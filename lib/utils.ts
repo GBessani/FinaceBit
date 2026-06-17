@@ -72,7 +72,7 @@ export function getInvoiceMonth(purchaseDate: string, closingDay: number): strin
     month += 1
     if (month > 12) { month = 1; year += 1 }
   }
-  return `${year}-${String(month).padStart(2, "0")}`
+  return `${year}-${String(month).padStart(2, "0")}-01`
 }
 
 /**
@@ -87,7 +87,7 @@ export function getActiveInvoiceMonth(closingDay: number, today: Date = new Date
     month += 1
     if (month > 12) { month = 1; year += 1 }
   }
-  return `${year}-${String(month).padStart(2, "0")}`
+  return `${year}-${String(month).padStart(2, "0")}-01`
 }
 
 /**
@@ -99,5 +99,5 @@ export function addMonthsToInvoiceMonth(invoiceMonth: string, monthsToAdd: numbe
   const total = (y * 12 + (m - 1)) + monthsToAdd
   const year = Math.floor(total / 12)
   const month = (total % 12) + 1
-  return `${year}-${String(month).padStart(2, "0")}`
+  return `${year}-${String(month).padStart(2, "0")}-01`
 }
