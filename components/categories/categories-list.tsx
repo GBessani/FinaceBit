@@ -6,12 +6,13 @@ import { useFinance } from "@/contexts/finance-context"
 import { Category } from "@/lib/types"
 import { generateId } from "@/lib/utils"
 import { CategoryIcon, availableIcons, availableEmojis } from "@/components/categories/category-icon"
-import { Plus, Trash2, X } from "lucide-react"
+import { Plus, Trash2, X, Pencil } from "lucide-react"
 
 export function CategoriesList() {
-  const { data, addCategory, deleteCategory, isLoaded } = useFinance()
+  const { data, addCategory, updateCategory, deleteCategory, isLoaded } = useFinance()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense")
 
@@ -71,12 +72,20 @@ export function CategoriesList() {
             key={category.id}
             className="bg-card border border-border rounded-xl p-4 shadow-sm group relative"
           >
-            <button
-              onClick={() => setDeleteId(category.id)}
-              className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              <button
+                onClick={() => setEditingCategory(category)}
+                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setDeleteId(category.id)}
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
 
             <div
               className="p-3 rounded-xl w-fit mb-3"
@@ -100,6 +109,17 @@ export function CategoriesList() {
           }}
         />
       )}
+      {editingCategory && (
+        <CategoryForm
+          type={editingCategory.type as "income" | "expense"}
+          initial={editingCategory}
+          onClose={() => setEditingCategory(null)}
+          onSubmit={(category) => {
+            updateCategory(category)
+            setEditingCategory(null)
+          }}
+        />
+      )}
       <DeleteConfirm
         isOpen={!!deleteId}
         title="Excluir categoria?"
@@ -113,6 +133,7 @@ export function CategoriesList() {
 
 interface CategoryFormProps {
   type: "income" | "expense"
+  initial?: Category
   onClose: () => void
   onSubmit: (category: Category) => void
 }
@@ -128,18 +149,19 @@ const CATEGORY_COLORS = [
   "#06b6d4",
 ]
 
-function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
-  const [name, setName] = useState("")
-  const [icon, setIcon] = useState(availableIcons[0])
+function CategoryForm({ type, initial, onClose, onSubmit }: CategoryFormProps) {
+  const isEditing = !!initial
+  const [name, setName] = useState(initial?.name ?? "")
+  const [icon, setIcon] = useState(initial?.icon ?? availableIcons[0])
   const [iconMode, setIconMode] = useState<"icons" | "emojis">("icons")
-  const [color, setColor] = useState(CATEGORY_COLORS[0])
+  const [color, setColor] = useState(initial?.color ?? CATEGORY_COLORS[0])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name) return
 
     onSubmit({
-      id: generateId(),
+      id: initial?.id ?? generateId(),
       name,
       icon,
       color,
@@ -152,7 +174,7 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="font-semibold text-lg">
-            Nova Categoria de {type === "income" ? "Receita" : "Despesa"}
+            {isEditing ? "Editar" : "Nova"} Categoria de {type === "income" ? "Receita" : "Despesa"}
           </h3>
           <button
             onClick={onClose}
@@ -237,7 +259,7 @@ function CategoryForm({ type, onClose, onSubmit }: CategoryFormProps) {
             type="submit"
             className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
           >
-            Criar Categoria
+            {isEditing ? "Salvar Alterações" : "Criar Categoria"}
           </button>
         </form>
       </div>
