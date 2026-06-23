@@ -5,7 +5,7 @@ import { useFinance } from "@/contexts/finance-context"
 import { Transaction } from "@/lib/types"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
 import { validateAmount, validateDate } from "@/lib/validation"
-import { format, parseISO, startOfDay } from "date-fns"
+import { format, parseISO, startOfDay, isToday, isYesterday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
@@ -270,6 +270,43 @@ export function TransactionsList() {
   const visibleList = currentList.slice(0, visibleCount)
   const hasMore = currentList.length > visibleCount
 
+  // Agrupa as transações visíveis por data, preservando a ordem da lista.
+  // Cada grupo carrega: label amigável, contagem e total do dia (saldo:
+  // receitas somam, despesas subtraem; transfer não afeta).
+  const groupedByDate = useMemo(() => {
+    const groups: { dateKey: string; label: string; items: Transaction[]; total: number }[] = []
+    const byKey = new Map<string, { label: string; items: Transaction[]; total: number }>()
+
+    for (const tx of visibleList) {
+      const key = tx.date // YYYY-MM-DD
+      if (!byKey.has(key)) {
+        const d = parseISO(key)
+        const label = isToday(d)
+          ? "Hoje"
+          : isYesterday(d)
+          ? "Ontem"
+          : format(d, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+        const grp = { label, items: [] as Transaction[], total: 0 }
+        byKey.set(key, grp)
+        groups.push({ dateKey: key, ...grp } as any)
+      }
+      const grp = byKey.get(key)!
+      grp.items.push(tx)
+      grp.total += tx.type === "income" ? tx.amount : tx.type === "expense" ? -tx.amount : 0
+    }
+
+    // reconstrói o array final na ordem de aparição, com os dados já preenchidos
+    const seen = new Set<string>()
+    const ordered: { dateKey: string; label: string; items: Transaction[]; total: number }[] = []
+    for (const tx of visibleList) {
+      if (seen.has(tx.date)) continue
+      seen.add(tx.date)
+      const g = byKey.get(tx.date)!
+      ordered.push({ dateKey: tx.date, label: g.label, items: g.items, total: g.total })
+    }
+    return ordered
+  }, [visibleList])
+
   // Cartão selecionado (para exibir cor/nome no preview)
   const selectedCard = creditCards.find(c => c.id === form.cardId)
 
@@ -381,15 +418,29 @@ export function TransactionsList() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {visibleList.map(tx => {
-            const category = getCategory(tx.categoryId)
-            return (
-              <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
-                activeTab === "overdue"  ? "border-red-200 dark:border-red-900"   :
-                activeTab === "pending"  ? "border-amber-200 dark:border-amber-900" :
-                                           "border-border"
-              }`}>
+        <div className="space-y-5">
+          {groupedByDate.map(group => (
+            <div key={group.dateKey} className="space-y-2">
+              {/* Cabeçalho do dia: data · contagem · total */}
+              <div className="flex items-center justify-between px-1 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1">
+                <span className="text-sm font-semibold text-foreground capitalize">{group.label}</span>
+                <span className="text-xs text-muted-foreground">
+                  {group.items.length} {group.items.length === 1 ? "item" : "itens"}
+                  {group.total !== 0 && (
+                    <> · <span className={group.total > 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-red-500 font-medium"}>
+                      {group.total > 0 ? "+" : "-"}{formatCurrency(Math.abs(group.total))}
+                    </span></>
+                  )}
+                </span>
+              </div>
+              {group.items.map(tx => {
+                const category = getCategory(tx.categoryId)
+                return (
+                  <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
+                    activeTab === "overdue"  ? "border-red-200 dark:border-red-900"   :
+                    activeTab === "pending"  ? "border-amber-200 dark:border-amber-900" :
+                                               "border-border"
+                  }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {category && <CategoryIcon icon={category.icon} color={category.color} />}
@@ -437,9 +488,11 @@ export function TransactionsList() {
                     </button>
                   </div>
                 )}
-              </div>
-            )
-          })}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
           {hasMore && (
             <button
               onClick={() => setVisibleCount(c => c + 30)}
