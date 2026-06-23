@@ -77,7 +77,7 @@ export function ConsultantProvider({ children, user }: { children: React.ReactNo
         .select("consultant_id")
         .eq("client_id", user!.id)
         .eq("status", "active")
-        .single()
+        .maybeSingle()
 
       if (!rel?.consultant_id) return
 
