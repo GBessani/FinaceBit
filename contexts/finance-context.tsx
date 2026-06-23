@@ -243,32 +243,60 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setIsLoaded(true)
   }, [supabase])
 
-  React.useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      if (user) loadData(user.id)
-      else setIsLoaded(true)
-    })
+  // Evita loadData duplicado: guarda o último userId carregado.
+  const loadedForRef = React.useRef<string | null>(null)
 
+  React.useEffect(() => {
+    let active = true
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      const u = session?.user ?? null
+      if (!active) return
+
+      setUser(u)
+      if (!u) {
+        loadedForRef.current = null
+        setIsLoaded(true)
+        return
+      }
+
+      const targetId = activeClientId || u.id
+      targetUserIdRef.current = targetId
+
+      // só carrega se ainda não carregou para esse alvo
+      if (loadedForRef.current !== targetId) {
+        loadedForRef.current = targetId
+        loadData(targetId)
+      }
+    }
+
+    init()
+
+    // Reage a login/logout, mas sem recarregar se já carregamos para o usuário.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null
+      if (!active) return
       setUser(u)
-      if (u) loadData(u.id)
-    })
 
-    return () => subscription.unsubscribe()
-  }, [supabase, loadData])
+      if (!u) {
+        loadedForRef.current = null
+        return
+      }
 
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null
-      if (u) {
-        const targetId = activeClientId || u.id
-        targetUserIdRef.current = targetId
+      const targetId = activeClientId || u.id
+      targetUserIdRef.current = targetId
+      if (loadedForRef.current !== targetId) {
+        loadedForRef.current = targetId
         loadData(targetId)
       }
     })
-  }, [activeClientId])
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, loadData, activeClientId])
 
   const addTransaction = React.useCallback(async (t: Transaction) => {
     if (!user) return
