@@ -9,10 +9,11 @@ import { format, parseISO, startOfDay, isToday, isYesterday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
-  Search, CreditCard,
+  Search, CreditCard, Upload,
 } from "lucide-react"
 import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
+import { OFXImportModal } from "@/components/transactions/ofx-import-modal"
 import { toast } from "sonner"
 
 type Tab = "pending" | "overdue" | "completed"
@@ -37,6 +38,7 @@ export function TransactionsList() {
   const [showMonthPicker, setShowMonthPicker] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
   const [showForm, setShowForm] = useState(false)
+  const [showOFXImport, setShowOFXImport] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -379,12 +381,22 @@ export function TransactionsList() {
             <option value="transfer">Transferências</option>
           </select>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
-        >
-          <Plus className="h-4 w-4" /> Nova
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setShowOFXImport(true)}
+            title="Importar extrato OFX"
+            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Importar OFX</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Nova
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -832,6 +844,10 @@ export function TransactionsList() {
             </form>
           </div>
         </div>
+      )}
+
+      {showOFXImport && (
+        <OFXImportModal onClose={() => setShowOFXImport(false)} />
       )}
 
       <DeleteConfirm
