@@ -2,14 +2,14 @@
 
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
-import { Transaction } from "@/lib/types"
+import { Transaction, FixedBill, RecurrenceType } from "@/lib/types"
 import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
 import { validateAmount, validateDate } from "@/lib/validation"
 import { format, parseISO, startOfDay, isToday, isYesterday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
-  Search, CreditCard, Upload,
+  Search, CreditCard, Upload, RefreshCw,
 } from "lucide-react"
 import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
@@ -19,6 +19,43 @@ import { toast } from "sonner"
 type Tab = "pending" | "overdue" | "completed"
 type TransactionType = "income" | "expense" | "transfer"
 type WalletMode = "digital" | "cash" | "card"
+
+function ConfirmFixedBillButton({ bill }: { bill: FixedBill }) {
+  const { addTransaction } = useFinance()
+  const [loading, setLoading] = useState(false)
+
+  async function confirm() {
+    if (loading) return
+    setLoading(true)
+    try {
+      await addTransaction({
+        id: crypto.randomUUID(),
+        description: bill.description,
+        amount: bill.amount,
+        type: bill.type as "income" | "expense",
+        categoryId: bill.categoryId,
+        date: localDateStr(),
+        wallet: (bill.wallet === "credit_card" ? "digital" : bill.wallet) as "digital" | "cash",
+        status: "completed",
+        notes: "Confirmado de conta fixa",
+      })
+      toast.success(`${bill.description} confirmada!`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={confirm}
+      disabled={loading}
+      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors disabled:opacity-50"
+    >
+      <CheckCircle2 className="h-3.5 w-3.5" />
+      {loading ? "..." : "Confirmar"}
+    </button>
+  )
+}
 
 export function TransactionsList() {
   const {
@@ -30,6 +67,7 @@ export function TransactionsList() {
     getCategory,
     isLoaded,
     addCCPurchase,
+    addFixedBill,
     creditCards,
   } = useFinance()
 
@@ -72,6 +110,18 @@ export function TransactionsList() {
 
   const todayStr = localDateStr()
 
+  // Contas fixas ativas que vencem no mês selecionado (para a aba "Contas Fixas")
+  const fixedBillsDueThisMonth = useMemo(() => {
+    const month = selectedMonth || getCurrentMonth()
+    return data.fixedBills.filter(b => {
+      if (!b.isActive || b.type === "income") return false
+      // Filtra pelo mês selecionado via dueDay — a conta vence nesse mês
+      const [y, m] = month.split("-").map(Number)
+      const dueDate = `${y}-${String(m).padStart(2,"0")}-${String(b.dueDay).padStart(2,"0")}`
+      return dueDate.startsWith(month)
+    })
+  }, [data.fixedBills, selectedMonth])
+
   const { pending, overdue, completed } = useMemo(() => {
     const txs = data.transactions.filter(t => {
       if (filterType !== "all" && t.type !== filterType) return false
@@ -89,6 +139,9 @@ export function TransactionsList() {
   // ─── Form state ──────────────────────────────────────────────────────────────
 
   const [walletMode, setWalletMode] = useState<WalletMode>("digital")
+  const [isFixed, setIsFixed] = useState(false)
+  const [fixedDueDay, setFixedDueDay] = useState("1")
+  const [fixedRecurrence, setFixedRecurrence] = useState<RecurrenceType>("monthly")
   const [form, setForm] = useState<{
     type: TransactionType
     description: string
@@ -114,6 +167,9 @@ export function TransactionsList() {
 
   function resetForm() {
     setWalletMode("digital")
+    setIsFixed(false)
+    setFixedDueDay("1")
+    setFixedRecurrence("monthly")
     setForm({
       type: "expense",
       description: "",
@@ -197,6 +253,36 @@ export function TransactionsList() {
       return
     }
 
+    // ── Conta fixa ──────────────────────────────────────────────
+    if (isFixed) {
+      if (!form.description.trim()) { toast.error("Preencha a descrição"); return }
+      const amtErrF = validateAmount(form.amount)
+      if (amtErrF) { toast.error(amtErrF); return }
+      const dueDay = parseInt(fixedDueDay)
+      if (!fixedDueDay || dueDay < 1 || dueDay > 31) { toast.error("Dia de vencimento inválido"); return }
+      const wm = walletMode as WalletMode
+      const billWallet: "digital" | "cash" | "credit_card" =
+        wm === "card" ? "credit_card" : wm as "digital" | "cash"
+      const billCardId = wm === "card" ? form.cardId : undefined
+      if (billWallet === "credit_card" && !billCardId) { toast.error("Selecione um cartão"); return }
+      await addFixedBill({
+        id: crypto.randomUUID(),
+        description: form.description,
+        amount: parseFloat(form.amount),
+        type: form.type as "income" | "expense",
+        categoryId: form.categoryId,
+        dueDay,
+        recurrence: fixedRecurrence,
+        isActive: true,
+        notes: undefined,
+        wallet: billWallet,
+        creditCardId: billCardId,
+      })
+      toast.success("Conta fixa criada!")
+      resetForm()
+      return
+    }
+
     // ── Transação normal ─────────────────────────────────────────
     if (!form.description.trim()) { toast.error("Preencha a descrição"); return }
     const amtErr = validateAmount(form.amount)
@@ -264,7 +350,7 @@ export function TransactionsList() {
 
   const tabs = [
     { id: "pending"   as Tab, label: "A Vencer",   icon: Clock,        count: pending.length,   color: "text-amber-500"  },
-    { id: "overdue"   as Tab, label: "Atrasadas",   icon: AlertCircle,  count: overdue.length,   color: "text-red-500"    },
+    { id: "overdue"   as Tab, label: "Contas Fixas", icon: RefreshCw,   count: fixedBillsDueThisMonth.length, color: "text-purple-500" },
     { id: "completed" as Tab, label: "Concluídas",  icon: CheckCircle2, count: completed.length, color: "text-emerald-500"},
   ]
 
@@ -418,15 +504,56 @@ export function TransactionsList() {
       </div>
 
       {/* Lista */}
-      {currentList.length === 0 ? (
+      {activeTab === "overdue" ? (
+        /* ── ABA CONTAS FIXAS ──────────────────────────────────── */
+        fixedBillsDueThisMonth.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <div className="text-4xl mb-3">🔄</div>
+            <p className="font-medium">Nenhuma conta fixa para o mês</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {fixedBillsDueThisMonth.map(bill => {
+              const category = getCategory(bill.categoryId)
+              const card = bill.creditCardId ? data.creditCards.find(c => c.id === bill.creditCardId) : null
+              return (
+                <div key={bill.id} className="bg-card border border-purple-200 dark:border-purple-900 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    {category && <CategoryIcon icon={category.icon} color={category.color} />}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{bill.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <span>Dia {bill.dueDay}</span>
+                        <span>·</span>
+                        <span>{{ monthly: "Mensal", weekly: "Semanal", biweekly: "Quinzenal", yearly: "Anual" }[bill.recurrence]}</span>
+                        {card && (
+                          <>
+                            <span>·</span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: card.color }} />
+                              {card.name}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <p className="font-semibold text-red-500">-{formatCurrency(bill.amount)}</p>
+                      <ConfirmFixedBillButton bill={bill} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      ) : currentList.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <div className="text-4xl mb-3">
-            {activeTab === "pending" ? "📅" : activeTab === "overdue" ? "⚠️" : "✅"}
+            {activeTab === "pending" ? "📅" : "✅"}
           </div>
           <p className="font-medium">
-            {activeTab === "pending"  ? "Nenhum lançamento futuro"    :
-             activeTab === "overdue"  ? "Nenhuma transação atrasada"  :
-                                        "Nenhuma transação encontrada"}
+            {activeTab === "pending" ? "Nenhum lançamento futuro" : "Nenhuma transação encontrada"}
           </p>
         </div>
       ) : (
@@ -449,7 +576,6 @@ export function TransactionsList() {
                 const category = getCategory(tx.categoryId)
                 return (
                   <div key={tx.id} className={`bg-card border rounded-xl p-4 ${
-                    activeTab === "overdue"  ? "border-red-200 dark:border-red-900"   :
                     activeTab === "pending"  ? "border-amber-200 dark:border-amber-900" :
                                                "border-border"
                   }`}>
@@ -476,7 +602,7 @@ export function TransactionsList() {
                   </div>
                 </div>
 
-                {(activeTab === "pending" || activeTab === "overdue") && (
+                {activeTab === "pending" && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                     <button onClick={() => handleConfirm(tx)}
                       className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
@@ -580,6 +706,57 @@ export function TransactionsList() {
                     <span className="text-base">💳</span>
                     Cartão
                   </button>
+                </div>
+              )}
+
+              {/* ── Switch: É conta fixa? (só para criação, não edição) ── */}
+              {!editingTx && walletMode !== "card" && (
+                <button
+                  type="button"
+                  onClick={() => setIsFixed(f => !f)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    isFixed
+                      ? "border-purple-400 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300"
+                      : "border-border hover:bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    É conta fixa? (recorrente todo mês)
+                  </span>
+                  <div className={`w-9 h-5 rounded-full transition-colors relative ${isFixed ? "bg-purple-500" : "bg-muted"}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isFixed ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </div>
+                </button>
+              )}
+
+              {/* ── Campos extras de conta fixa ── */}
+              {isFixed && !editingTx && walletMode !== "card" && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Dia de vencimento</label>
+                    <input
+                      type="number"
+                      min="1" max="31"
+                      value={fixedDueDay}
+                      onChange={e => setFixedDueDay(e.target.value)}
+                      inputMode="numeric"
+                      className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Recorrência</label>
+                    <select
+                      value={fixedRecurrence}
+                      onChange={e => setFixedRecurrence(e.target.value as RecurrenceType)}
+                      className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    >
+                      <option value="monthly">Mensal</option>
+                      <option value="weekly">Semanal</option>
+                      <option value="biweekly">Quinzenal</option>
+                      <option value="yearly">Anual</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
