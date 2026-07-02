@@ -50,6 +50,8 @@ export function FixedBillsList() {
   const [dueDay, setDueDay] = React.useState("1")
   const [recurrence, setRecurrence] = React.useState<RecurrenceType>("monthly")
   const [notes, setNotes] = React.useState("")
+  const [wallet, setWallet] = React.useState<"digital" | "cash" | "credit_card">("digital")
+  const [creditCardId, setCreditCardId] = React.useState("")
 
   const filteredCategories = data.categories.filter((c) => c.type === type)
 
@@ -61,6 +63,8 @@ export function FixedBillsList() {
     setDueDay("1")
     setRecurrence("monthly")
     setNotes("")
+    setWallet("digital")
+    setCreditCardId("")
     setEditingBill(null)
   }
 
@@ -74,6 +78,8 @@ export function FixedBillsList() {
       setDueDay(bill.dueDay.toString())
       setRecurrence(bill.recurrence)
       setNotes(bill.notes || "")
+      setWallet(bill.wallet ?? "digital")
+      setCreditCardId(bill.creditCardId ?? "")
     } else {
       resetForm()
     }
@@ -88,6 +94,7 @@ export function FixedBillsList() {
     if (amtErr) errs.amount = amtErr
     if (!dueDay) errs.dueDay = "Dia de vencimento é obrigatório"
     else if (parseInt(dueDay) < 1 || parseInt(dueDay) > 31) errs.dueDay = "Dia deve ser entre 1 e 31"
+    if (wallet === "credit_card" && !creditCardId) errs.creditCard = "Selecione o cartão"
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     const billData: FixedBill = {
@@ -100,6 +107,8 @@ export function FixedBillsList() {
       recurrence,
       isActive: editingBill?.isActive ?? true,
       notes: notes || undefined,
+      wallet,
+      creditCardId: wallet === "credit_card" ? creditCardId : undefined,
     }
 
     if (editingBill) {
@@ -179,6 +188,7 @@ export function FixedBillsList() {
                   <Select value={type} onValueChange={(v: "income" | "expense") => {
                     setType(v)
                     setCategoryId("")
+                    if (v === "income") { setWallet("digital"); setCreditCardId("") }
                   }}>
                     <SelectTrigger>
                       <SelectValue />
@@ -204,6 +214,60 @@ export function FixedBillsList() {
                   </Select>
                 </div>
               </div>
+
+              {/* Carteira — só mostra "Cartão" para despesas */}
+              {type === "expense" && (
+                <div className="space-y-2">
+                  <Label>Cobrado em</Label>
+                  <div className="flex gap-2">
+                    {(["digital", "cash", "credit_card"] as const).map(w => (
+                      <button
+                        key={w}
+                        type="button"
+                        onClick={() => { setWallet(w); if (w !== "credit_card") setCreditCardId("") }}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          wallet === w
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border hover:bg-secondary"
+                        }`}
+                      >
+                        {w === "digital" ? "💳 Digital" : w === "cash" ? "💵 Físico" : "🔄 Cartão"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Seletor de cartão — só aparece quando wallet = credit_card */}
+              {wallet === "credit_card" && (
+                <div className="space-y-2">
+                  <Label>Cartão de Crédito</Label>
+                  <Select value={creditCardId} onValueChange={setCreditCardId}>
+                    <SelectTrigger className={errors.creditCard ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Selecione o cartão..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data.creditCards.filter(c => c.isActive).map(card => (
+                        <SelectItem key={card.id} value={card.id}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full inline-block shrink-0"
+                              style={{ backgroundColor: card.color }}
+                            />
+                            {card.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.creditCard && (
+                    <p className="text-xs text-red-500">{errors.creditCard}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    A parcela será gerada automaticamente na fatura todo mês.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Input
@@ -330,6 +394,15 @@ export function FixedBillsList() {
                               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-0.5">
                                 <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Dia {bill.dueDay}</span>
                                 <Badge variant="outline" className="text-xs">{recurrenceLabels[bill.recurrence]}</Badge>
+                                {bill.wallet === "credit_card" && (() => {
+                                  const card = data.creditCards.find(c => c.id === bill.creditCardId)
+                                  return card ? (
+                                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: card.color }} />
+                                      {card.name}
+                                    </Badge>
+                                  ) : null
+                                })()}
                                 {bill.isActive && daysUntil <= 5 && (
                                   <Badge variant="destructive" className="text-xs">
                                     {daysUntil === 0 ? "Hoje" : `Em ${daysUntil} dias`}

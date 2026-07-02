@@ -16,7 +16,7 @@ import {
   CreditCardPurchase,
   CreditCardInstallment,
 } from "@/lib/types"
-import { localDateStr, getInvoiceMonth, addMonthsToInvoiceMonth } from "@/lib/utils"
+import { localDateStr, getInvoiceMonth, getActiveInvoiceMonth, addMonthsToInvoiceMonth } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
@@ -69,6 +69,8 @@ function mapFixedBill(row: Record<string, unknown>): FixedBill {
     recurrence: row.recurrence as FixedBill["recurrence"],
     isActive: row.is_active as boolean,
     notes: row.notes as string | undefined,
+    wallet: (row.wallet as FixedBill["wallet"]) ?? "digital",
+    creditCardId: row.credit_card_id as string | undefined,
     totalInstallments: row.total_installments as number | undefined,
     currentInstallment: row.current_installment as number | undefined,
     startDate: row.start_date as string | undefined,
@@ -240,6 +242,87 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (profileResult.data?.initial_balance) setInitialBalanceState(Number(profileResult.data.initial_balance))
 
+    // Gera automaticamente parcelas de cartão para contas fixas de cartão ativas.
+    const ccBills = (bills.data ?? []).filter(
+      (b: any) => b.wallet === "credit_card" && b.credit_card_id && b.is_active
+    )
+
+    let generatedAny = false
+    for (const bill of ccBills) {
+      const card = (cards.data ?? []).find((c: any) => c.id === bill.credit_card_id)
+      if (!card) continue
+
+      const billActiveMonth = getActiveInvoiceMonth(card.closing_day)
+
+      // Verifica se já existe purchase para esta conta fixa neste mês ativo
+      const alreadyExists = (ccPurchases.data ?? []).some(
+        (p: any) =>
+          p.notes === `fixed_bill:${bill.id}` &&
+          (ccInstallments.data ?? []).some(
+            (i: any) => i.purchase_id === p.id && i.due_month === billActiveMonth
+          )
+      )
+      if (alreadyExists) continue
+
+      // Cria a purchase + installment do mês
+      const { data: pRow } = await supabase.from("credit_card_purchases").insert({
+        user_id: userId,
+        credit_card_id: bill.credit_card_id,
+        description: bill.description,
+        total_amount: bill.amount,
+        installments: 1,
+        category_id: bill.category_id ?? null,
+        purchase_date: localDateStr(),
+        notes: `fixed_bill:${bill.id}`,
+      }).select().single()
+
+      if (pRow) {
+        await supabase.from("credit_card_installments").insert({
+          purchase_id: pRow.id,
+          user_id: userId,
+          credit_card_id: bill.credit_card_id,
+          installment_num: 1,
+          due_month: billActiveMonth,
+          amount: bill.amount,
+          is_paid: false,
+        })
+        generatedAny = true
+      }
+    }
+
+    // Se gerou novas parcelas, recarrega CC do banco para o estado ficar sincronizado
+    if (generatedAny) {
+      const [freshPurchases, freshInstallments] = await Promise.all([
+        supabase.from("credit_card_purchases").select("*").eq("user_id", userId).order("purchase_date", { ascending: false }),
+        supabase.from("credit_card_installments").select("*, credit_card_purchases(*)").eq("user_id", userId),
+      ])
+      setData(prev => ({
+        ...prev,
+        ccPurchases: (freshPurchases.data ?? []).map((p: any) => ({
+          id: p.id, creditCardId: p.credit_card_id, description: p.description,
+          totalAmount: Number(p.total_amount), installments: p.installments,
+          categoryId: p.category_id, purchaseDate: p.purchase_date,
+          notes: p.notes, createdAt: p.created_at,
+        })),
+        ccInstallments: (freshInstallments.data ?? []).map((r: any) => ({
+          id: r.id, purchaseId: r.purchase_id, creditCardId: r.credit_card_id,
+          installmentNum: r.installment_num, dueMonth: r.due_month,
+          amount: Number(r.amount), isPaid: r.is_paid,
+          purchase: r.credit_card_purchases ? {
+            id: r.credit_card_purchases.id,
+            creditCardId: r.credit_card_purchases.credit_card_id,
+            description: r.credit_card_purchases.description,
+            totalAmount: Number(r.credit_card_purchases.total_amount),
+            installments: r.credit_card_purchases.installments,
+            categoryId: r.credit_card_purchases.category_id,
+            purchaseDate: r.credit_card_purchases.purchase_date,
+            notes: r.credit_card_purchases.notes,
+            createdAt: r.credit_card_purchases.created_at,
+          } : undefined,
+        })),
+      }))
+    }
+
     setIsLoaded(true)
   }, [supabase])
 
@@ -387,6 +470,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       user_id: targetUserIdRef.current || user!.id, description: b.description, amount: b.amount, type: b.type,
       category_id: b.categoryId || null, due_day: b.dueDay, recurrence: b.recurrence,
       is_active: b.isActive, notes: b.notes ?? null,
+      wallet: b.wallet ?? "digital",
+      credit_card_id: b.creditCardId ?? null,
       total_installments: b.totalInstallments ?? null,
       current_installment: b.totalInstallments ? 1 : null,
       start_date: b.startDate ?? null,

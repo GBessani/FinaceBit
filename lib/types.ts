@@ -44,6 +44,9 @@ export interface FixedBill {
   recurrence: RecurrenceType
   isActive: boolean
   notes?: string
+  // Cartão de crédito (quando wallet = "credit_card")
+  wallet?: "digital" | "cash" | "credit_card"
+  creditCardId?: string
   // Parcelamento (opcional)
   totalInstallments?: number  // total de parcelas (null = sem fim)
   currentInstallment?: number // parcela atual
