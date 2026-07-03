@@ -141,16 +141,13 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       else months[key].forecastExpense += t.amount
     })
 
-    // Parcelas de cartão — pagas entram no realizado, não pagas na previsão.
-    // Usa dueMonth (YYYY-MM-01) para agrupar no mês correto da fatura.
-    data.ccInstallments.forEach(inst => {
+    // Parcelas de cartão NÃO pagas → previsão de despesa.
+    // Parcelas PAGAS já entram via transaction "Fatura X" criada pelo payCCInvoice,
+    // então não contamos aqui para evitar dupla contagem.
+    data.ccInstallments.filter(i => !i.isPaid).forEach(inst => {
       const key = inst.dueMonth.substring(0, 7)
       if (!months[key]) return
-      if (inst.isPaid) {
-        months[key].expense += inst.amount
-      } else {
-        months[key].forecastExpense += inst.amount
-      }
+      months[key].forecastExpense += inst.amount
     })
 
     return Object.values(months)
