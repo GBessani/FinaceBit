@@ -2,11 +2,14 @@
 
 import { useFinance } from "@/contexts/finance-context"
 import { formatCurrency, getActiveInvoiceMonth, getCurrentMonth, parseMonth, getMonthName } from "@/lib/utils"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts"
+import { X, TrendingUp, TrendingDown } from "lucide-react"
+import { format, parseISO } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export function ExpenseChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, getCategory, isLoaded } = useFinance()
@@ -87,6 +90,7 @@ export function ExpenseChart({ selectedMonth }: { selectedMonth?: string } = {})
 
 export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {}) {
   const { data, isLoaded } = useFinance()
+  const [modalMonth, setModalMonth] = useState<string | null>(null)
 
   const monthlyData = useMemo(() => {
     const now = new Date()
@@ -177,7 +181,21 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={monthlyData}>
+          <BarChart
+            data={monthlyData}
+            onClick={(payload) => {
+              if (!payload?.activePayload?.[0]) return
+              const label = payload.activePayload[0].payload?.month
+              const entry = monthlyData.find(m => m.month === label)
+              if (!entry) return
+              const idx = monthlyData.indexOf(entry)
+              const now = new Date()
+              const date = new Date(now.getFullYear(), now.getMonth() - (monthlyData.length - 2 - idx), 1)
+              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,"0")}`
+              setModalMonth(key)
+            }}
+            style={{ cursor: "pointer" }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
             <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={yTickFormatter} />
@@ -221,6 +239,14 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
           </>
         )}
       </div>
+
+      {modalMonth && (
+        <MonthSummaryModal
+          month={modalMonth}
+          transactions={data.transactions}
+          onClose={() => setModalMonth(null)}
+        />
+      )}
     </div>
   )
 }
@@ -282,6 +308,118 @@ export function CreditCardChart({ selectedMonth }: { selectedMonth?: string } = 
         <div className="pt-2 border-t border-border flex justify-between text-sm font-semibold mt-1">
           <span>Total</span>
           <span>{formatCurrency(total)}</span>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+// ─── Modal de resumo mensal ───────────────────────────────────────────────────
+interface MonthSummaryModalProps {
+  month: string // YYYY-MM
+  transactions: import("@/lib/types").Transaction[]
+  onClose: () => void
+}
+
+function MonthSummaryModal({ month, transactions, onClose }: MonthSummaryModalProps) {
+  const monthTxs = transactions.filter(
+    t => t.date.startsWith(month) && t.status !== "pending"
+  )
+  const income  = monthTxs.filter(t => t.type === "income")
+    .sort((a, b) => b.amount - a.amount)
+  const expense = monthTxs.filter(t => t.type === "expense")
+    .sort((a, b) => b.amount - a.amount)
+
+  const totalIncome  = income.reduce((s, t) => s + t.amount, 0)
+  const totalExpense = expense.reduce((s, t) => s + t.amount, 0)
+  const saldo = totalIncome - totalExpense
+
+  const [y, m] = month.split("-").map(Number)
+  const label = format(new Date(y, m - 1, 1), "MMMM 'de' yyyy", { locale: ptBR })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+          <div>
+            <h3 className="font-semibold capitalize">{label}</h3>
+            <p className={`text-sm font-medium mt-0.5 ${saldo >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+              Saldo: {saldo >= 0 ? "+" : ""}{formatCurrency(saldo)}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-secondary rounded-lg transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Corpo: duas colunas */}
+        <div className="flex-1 overflow-hidden grid grid-cols-2 divide-x divide-border">
+          
+          {/* Entradas */}
+          <div className="flex flex-col overflow-hidden">
+            <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-between shrink-0">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <TrendingUp className="h-3.5 w-3.5" /> Entradas
+              </span>
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                +{formatCurrency(totalIncome)}
+              </span>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {income.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-8">Sem receitas</p>
+              ) : income.map(t => (
+                <div key={t.id} className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm truncate">{t.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(t.date), "dd/MM", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 ml-2 tabular-nums">
+                    +{formatCurrency(t.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Saídas */}
+          <div className="flex flex-col overflow-hidden">
+            <div className="px-4 py-2.5 bg-red-50 dark:bg-red-950/30 flex items-center justify-between shrink-0">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400">
+                <TrendingDown className="h-3.5 w-3.5" /> Saídas
+              </span>
+              <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                -{formatCurrency(totalExpense)}
+              </span>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {expense.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-8">Sem despesas</p>
+              ) : expense.map(t => (
+                <div key={t.id} className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm truncate">{t.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(t.date), "dd/MM", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-red-500 shrink-0 ml-2 tabular-nums">
+                    -{formatCurrency(t.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Rodapé */}
+        <div className="px-4 py-3 border-t border-border shrink-0 flex justify-between text-xs text-muted-foreground">
+          <span>{income.length} entradas · {expense.length} saídas · {income.length + expense.length} total</span>
+          <span>Clique fora para fechar</span>
         </div>
       </div>
     </div>
