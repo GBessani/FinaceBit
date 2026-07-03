@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useFinance } from "@/contexts/finance-context"
-import { Transaction, FixedBill, RecurrenceType } from "@/lib/types"
-import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr } from "@/lib/utils"
+import { Transaction, FixedBill, RecurrenceType, CreditCard, CreditCardInstallment } from "@/lib/types"
+import { formatCurrency, getCurrentMonth, getMonthName, parseMonth, localDateStr, getActiveInvoiceMonth } from "@/lib/utils"
 import { validateAmount, validateDate } from "@/lib/validation"
 import { format, parseISO, startOfDay, isToday, isYesterday } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -19,6 +19,81 @@ import { toast } from "sonner"
 type Tab = "pending" | "overdue" | "completed"
 type TransactionType = "income" | "expense" | "transfer"
 type WalletMode = "digital" | "cash" | "card"
+
+
+interface InvoicePendingCardProps {
+  card: CreditCard
+  total: number
+  installments: CreditCardInstallment[]
+  dueDate: string
+  activeMonth: string
+  payCCInvoice: (cardId: string, month: string, total: number, ids: string[], name?: string) => Promise<void>
+}
+
+function InvoicePendingCard({ card, total, installments, dueDate, activeMonth, payCCInvoice }: InvoicePendingCardProps) {
+  const [paying, setPaying] = useState(false)
+  const todayStr = localDateStr()
+  const isOverdue = dueDate < todayStr
+
+  async function handlePay() {
+    if (paying) return
+    setPaying(true)
+    try {
+      await payCCInvoice(
+        card.id,
+        activeMonth,
+        total,
+        installments.map(i => i.id),
+        card.name,
+      )
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  return (
+    <div className={`bg-card border rounded-xl p-4 transition-colors ${
+      isOverdue ? "border-red-200 dark:border-red-900" : "border-indigo-200 dark:border-indigo-900"
+    }`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Dot colorido do cartão */}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ backgroundColor: card.color + "22", border: `2px solid ${card.color}` }}
+          >
+            <CreditCard className="h-4 w-4" style={{ color: card.color }} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium truncate">Fatura {card.name}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+              <span>Vence dia {card.dueDay}</span>
+              <span>·</span>
+              <span>{installments.length} {installments.length === 1 ? "compra" : "compras"}</span>
+              {isOverdue && (
+                <>
+                  <span>·</span>
+                  <span className="text-red-500 font-medium">Em atraso</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <p className="font-bold text-red-500">-{formatCurrency(total)}</p>
+          <button
+            onClick={handlePay}
+            disabled={paying}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {paying ? "..." : "Pagar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ConfirmFixedBillButton({ bill }: { bill: FixedBill }) {
   const { addTransaction } = useFinance()
@@ -68,6 +143,7 @@ export function TransactionsList() {
     isLoaded,
     addCCPurchase,
     addFixedBill,
+    payCCInvoice,
     creditCards,
   } = useFinance()
 
@@ -109,6 +185,28 @@ export function TransactionsList() {
   }, [data.transactions])
 
   const todayStr = localDateStr()
+
+  // Faturas pendentes por cartão — aparecerão em "A Vencer" no dia de vencimento
+  const pendingInvoices = useMemo(() => {
+    const month = selectedMonth || getCurrentMonth()
+    return data.creditCards
+      .filter(card => card.isActive)
+      .map(card => {
+        const activeMonth = getActiveInvoiceMonth(card.closingDay)
+        // Só mostra fatura do mês ativo quando o filtro de mês bate
+        if (!activeMonth.startsWith(month.substring(0, 7))) return null
+        const installments = data.ccInstallments.filter(
+          i => i.creditCardId === card.id && i.dueMonth === activeMonth && !i.isPaid
+        )
+        if (installments.length === 0) return null
+        const total = installments.reduce((s, i) => s + i.amount, 0)
+        // Data de vencimento: dia dueDay no mês ativo
+        const [y, m] = activeMonth.split("-").map(Number)
+        const dueDate = `${y}-${String(m).padStart(2,"0")}-${String(card.dueDay).padStart(2,"0")}`
+        return { card, total, installments, dueDate }
+      })
+      .filter(Boolean) as { card: typeof data.creditCards[0]; total: number; installments: typeof data.ccInstallments; dueDate: string }[]
+  }, [data.creditCards, data.ccInstallments, selectedMonth])
 
   // Contas fixas ativas que vencem no mês selecionado (para a aba "Contas Fixas")
   const fixedBillsDueThisMonth = useMemo(() => {
@@ -558,6 +656,32 @@ export function TransactionsList() {
         </div>
       ) : (
         <div className="space-y-5">
+          {/* ── Faturas de cartão pendentes (só na aba A Vencer) ── */}
+          {activeTab === "pending" && pendingInvoices.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1 py-1">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-indigo-500" />
+                  Faturas de Cartão
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {pendingInvoices.length} {pendingInvoices.length === 1 ? "cartão" : "cartões"}
+                </span>
+              </div>
+              {pendingInvoices.map(({ card, total, installments, dueDate }) => (
+                <InvoicePendingCard
+                  key={card.id}
+                  card={card}
+                  total={total}
+                  installments={installments}
+                  dueDate={dueDate}
+                  activeMonth={getActiveInvoiceMonth(card.closingDay)}
+                  payCCInvoice={payCCInvoice}
+                />
+              ))}
+            </div>
+          )}
+
           {groupedByDate.map(group => (
             <div key={group.dateKey} className="space-y-2">
               {/* Cabeçalho do dia: data · contagem · total */}
