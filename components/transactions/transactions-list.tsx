@@ -9,7 +9,7 @@ import { format, parseISO, startOfDay, isToday, isYesterday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
   Plus, X, Trash2, Edit2, CheckCircle2, Clock, AlertCircle,
-  Search, CreditCard, Upload, RefreshCw,
+  Search, CreditCard as CreditCardIcon, Upload, RefreshCw,
 } from "lucide-react"
 import { CategoryIcon } from "@/components/categories/category-icon"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
@@ -62,7 +62,7 @@ function InvoicePendingCard({ card, total, installments, dueDate, activeMonth, p
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
             style={{ backgroundColor: card.color + "22", border: `2px solid ${card.color}` }}
           >
-            <CreditCard className="h-4 w-4" style={{ color: card.color }} />
+            <CreditCardIcon className="h-4 w-4" style={{ color: card.color }} />
           </div>
           <div className="min-w-0">
             <p className="font-medium truncate">Fatura {card.name}</p>
@@ -661,7 +661,7 @@ export function TransactionsList() {
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1 py-1">
                 <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5 text-indigo-500" />
+                  <CreditCardIcon className="h-3.5 w-3.5 text-indigo-500" />
                   Faturas de Cartão
                 </span>
                 <span className="text-xs text-muted-foreground">
