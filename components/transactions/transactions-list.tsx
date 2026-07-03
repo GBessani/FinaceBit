@@ -186,27 +186,30 @@ export function TransactionsList() {
 
   const todayStr = localDateStr()
 
-  // Faturas pendentes por cartão — aparecerão em "A Vencer" no dia de vencimento
+  // Próxima fatura não paga de cada cartão — menor dueMonth com parcelas pendentes.
+  // Não depende de closingDay/activeMonth: funciona mesmo quando a fatura já fechou
+  // mas ainda não foi paga.
   const pendingInvoices = useMemo(() => {
-    const month = selectedMonth || getCurrentMonth()
     return data.creditCards
       .filter(card => card.isActive)
       .map(card => {
-        const activeMonth = getActiveInvoiceMonth(card.closingDay)
-        // Só mostra fatura do mês ativo quando o filtro de mês bate
-        if (!activeMonth.startsWith(month.substring(0, 7))) return null
-        const installments = data.ccInstallments.filter(
-          i => i.creditCardId === card.id && i.dueMonth === activeMonth && !i.isPaid
+        const unpaid = data.ccInstallments.filter(
+          i => i.creditCardId === card.id && !i.isPaid
         )
-        if (installments.length === 0) return null
+        if (unpaid.length === 0) return null
+
+        // Mês mais próximo com parcelas não pagas
+        const nextMonth = unpaid.reduce((min, i) => i.dueMonth < min ? i.dueMonth : min, unpaid[0].dueMonth)
+        const installments = unpaid.filter(i => i.dueMonth === nextMonth)
         const total = installments.reduce((s, i) => s + i.amount, 0)
-        // Data de vencimento: dia dueDay no mês ativo
-        const [y, m] = activeMonth.split("-").map(Number)
+
+        // Data de vencimento real: dia dueDay no mês da fatura
+        const [y, m] = nextMonth.split("-").map(Number)
         const dueDate = `${y}-${String(m).padStart(2,"0")}-${String(card.dueDay).padStart(2,"0")}`
-        return { card, total, installments, dueDate }
+        return { card, total, installments, dueDate, dueMonth: nextMonth }
       })
-      .filter(Boolean) as { card: typeof data.creditCards[0]; total: number; installments: typeof data.ccInstallments; dueDate: string }[]
-  }, [data.creditCards, data.ccInstallments, selectedMonth])
+      .filter(Boolean) as { card: typeof data.creditCards[0]; total: number; installments: typeof data.ccInstallments; dueDate: string; dueMonth: string }[]
+  }, [data.creditCards, data.ccInstallments])
 
   // Contas fixas ativas que vencem no mês selecionado (para a aba "Contas Fixas")
   const fixedBillsDueThisMonth = useMemo(() => {
@@ -668,17 +671,19 @@ export function TransactionsList() {
                   {pendingInvoices.length} {pendingInvoices.length === 1 ? "cartão" : "cartões"}
                 </span>
               </div>
-              {pendingInvoices.map(({ card, total, installments, dueDate }) => (
+              {pendingInvoices.map((inv) => {
+                return (
                 <InvoicePendingCard
-                  key={card.id}
-                  card={card}
-                  total={total}
-                  installments={installments}
-                  dueDate={dueDate}
-                  activeMonth={getActiveInvoiceMonth(card.closingDay)}
+                  key={inv.card.id}
+                  card={inv.card}
+                  total={inv.total}
+                  installments={inv.installments}
+                  dueDate={inv.dueDate}
+                  activeMonth={inv.dueMonth}
                   payCCInvoice={payCCInvoice}
                 />
-              ))}
+                )
+              })}
             </div>
           )}
 
