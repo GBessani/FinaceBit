@@ -141,8 +141,20 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       else months[key].forecastExpense += t.amount
     })
 
+    // Parcelas de cartão — pagas entram no realizado, não pagas na previsão.
+    // Usa dueMonth (YYYY-MM-01) para agrupar no mês correto da fatura.
+    data.ccInstallments.forEach(inst => {
+      const key = inst.dueMonth.substring(0, 7)
+      if (!months[key]) return
+      if (inst.isPaid) {
+        months[key].expense += inst.amount
+      } else {
+        months[key].forecastExpense += inst.amount
+      }
+    })
+
     return Object.values(months)
-  }, [data.transactions, data.fixedBills])
+  }, [data.transactions, data.fixedBills, data.ccInstallments])
 
   const hasForecast = monthlyData.some(m => m.forecastIncome > 0 || m.forecastExpense > 0)
 
