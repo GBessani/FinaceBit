@@ -110,35 +110,29 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       months[key] = { month: getMonthName(date.getMonth()).substring(0, 3), income: 0, expense: 0, forecastIncome: 0, forecastExpense: 0, isFuture }
     }
 
-    // Meses com movimento real
-    const monthsWithMovement = new Set([
-      ...data.transactions.map(t => t.date.substring(0, 7)),
-      ...data.transactions.filter(t => t.status === "completed").map(t => t.date.substring(0, 7)),
-    ])
-
-    // Transações manuais
-    data.transactions.forEach(t => {
+    // Transações CONCLUÍDAS → realizado (income/expense)
+    data.transactions.filter(t => t.status === "completed").forEach(t => {
       const key = t.date.substring(0, 7)
       if (!months[key]) return
       if (t.type === "income") months[key].income += t.amount
       else if (t.type === "expense") months[key].expense += t.amount
     })
 
-    // Contas fixas — apenas previsão no mês futuro
+    // Transações PENDENTES → previsão (forecastIncome/forecastExpense)
+    data.transactions.filter(t => t.status === "pending").forEach(t => {
+      const key = t.date.substring(0, 7)
+      if (!months[key]) return
+      if (t.type === "income") months[key].forecastIncome += t.amount
+      else months[key].forecastExpense += t.amount
+    })
+
+    // Contas fixas → previsão apenas em meses futuros
     data.fixedBills.filter(b => b.isActive).forEach(b => {
       Object.keys(months).forEach(key => {
         if (!months[key].isFuture) return
         if (b.type === "income") months[key].forecastIncome += b.amount
         else months[key].forecastExpense += b.amount
       })
-    })
-
-    // Lançamentos futuros NÃO concluídos → somam na previsão
-    data.transactions.filter(t => t.status === "pending").forEach(t => {
-      const key = t.date.substring(0, 7)
-      if (!months[key]) return
-      if (t.type === "income") months[key].forecastIncome += t.amount
-      else months[key].forecastExpense += t.amount
     })
 
     // Parcelas de cartão NÃO pagas → previsão de despesa.
