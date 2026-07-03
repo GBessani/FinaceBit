@@ -126,10 +126,22 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
       else months[key].forecastExpense += t.amount
     })
 
-    // Contas fixas → previsão apenas em meses futuros
+    // Contas fixas → previsão no mês atual e futuros (não no passado).
+    // No mês atual, só entra se ainda NÃO houver transação confirmada dela
+    // (confirmar uma conta fixa cria uma transaction com essa nota).
+    const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const confirmedFixedThisMonth = new Set(
+      data.transactions
+        .filter(t => t.status === "completed" && t.notes === "Confirmado de conta fixa" && t.date.startsWith(nowKey))
+        .map(t => t.description)
+    )
+
     data.fixedBills.filter(b => b.isActive).forEach(b => {
       Object.keys(months).forEach(key => {
-        if (!months[key].isFuture) return
+        // Passado não recebe previsão de conta fixa
+        if (key < nowKey) return
+        // No mês atual, pula se a conta fixa já foi confirmada
+        if (key === nowKey && confirmedFixedThisMonth.has(b.description)) return
         if (b.type === "income") months[key].forecastIncome += b.amount
         else months[key].forecastExpense += b.amount
       })
