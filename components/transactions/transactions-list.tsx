@@ -522,7 +522,7 @@ export function TransactionsList() {
             showMonthPicker ? "border-primary bg-primary/5" : "border-border hover:bg-secondary"
           }`}
         >
-          <span>{selectedMonth ? `${getMonthName(parseMonth(selectedMonth).month)} ${parseMonth(selectedMonth).year}` : "📅 Todos os meses"}</span>
+          <span className="truncate">{selectedMonth ? `${getMonthName(parseMonth(selectedMonth).month)} ${parseMonth(selectedMonth).year}` : "📅 Todos os meses"}</span>
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-muted-foreground transition-transform ${showMonthPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -550,57 +550,58 @@ export function TransactionsList() {
         )}
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar transação..."
-              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as "all" | TransactionType)}
-            className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
-          >
-            <option value="all">Todos</option>
-            <option value="income">Receitas</option>
-            <option value="expense">Despesas</option>
-            <option value="transfer">Transferências</option>
-          </select>
-          <select
-            value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none max-w-[160px]"
-          >
-            <option value="all">Todas categorias</option>
-            {data.categories
-              .filter(c => filterType === "all" || c.type === filterType)
-              .map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-          </select>
+      {/* Header — busca + ações */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar..."
+            className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setShowOFXImport(true)}
-            title="Importar extrato OFX"
-            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-colors"
-          >
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Importar OFX</span>
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-4 w-4" /> Nova
-          </button>
-        </div>
+        <button
+          onClick={() => setShowOFXImport(true)}
+          title="Importar extrato OFX"
+          className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-colors shrink-0"
+        >
+          <Upload className="h-4 w-4" />
+          <span className="hidden md:inline">Importar OFX</span>
+        </button>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Nova</span>
+        </button>
+      </div>
+
+      {/* Filtros — tipo + categoria (dividem a largura no mobile) */}
+      <div className="flex items-center gap-2">
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value as "all" | TransactionType)}
+          className="flex-1 min-w-0 px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="income">Receitas</option>
+          <option value="expense">Despesas</option>
+          <option value="transfer">Transferências</option>
+        </select>
+        <select
+          value={filterCategory}
+          onChange={e => setFilterCategory(e.target.value)}
+          className="flex-1 min-w-0 px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
+        >
+          <option value="all">Todas categorias</option>
+          {data.categories
+            .filter(c => filterType === "all" || c.type === filterType)
+            .map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+        </select>
       </div>
 
       {/* Tabs */}

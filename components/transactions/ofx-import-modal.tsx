@@ -231,7 +231,7 @@ export function OFXImportModal({ onClose }: Props) {
               </div>
 
               {/* Cabeçalho da tabela */}
-              <div className="px-4 py-2 border-b border-border grid grid-cols-[20px_1fr_90px_90px] gap-2 text-xs font-medium text-muted-foreground shrink-0">
+              <div className="px-4 py-2 border-b border-border grid grid-cols-[18px_1fr_76px_80px] sm:grid-cols-[20px_1fr_90px_90px] gap-1.5 sm:gap-2 text-xs font-medium text-muted-foreground shrink-0">
                 <button onClick={toggleAll} className="flex items-center justify-center">
                   <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
                     selectedCount === rows.length ? "bg-primary border-primary" : "border-border"
@@ -252,7 +252,7 @@ export function OFXImportModal({ onClose }: Props) {
                   return (
                     <div
                       key={row.fitId}
-                      className={`px-4 py-3 grid grid-cols-[20px_1fr_90px_90px] gap-2 items-center transition-colors ${
+                      className={`px-3 sm:px-4 py-3 grid grid-cols-[18px_1fr_76px_80px] sm:grid-cols-[20px_1fr_90px_90px] gap-1.5 sm:gap-2 items-center transition-colors ${
                         row.selected ? "bg-card" : "bg-secondary/20 opacity-50"
                       }`}
                     >
