@@ -217,7 +217,7 @@ export function TransactionsList() {
   const fixedBillsDueThisMonth = useMemo(() => {
     const month = selectedMonth || getCurrentMonth()
     return data.fixedBills.filter(b => {
-      if (!b.isActive || b.type === "income") return false
+      if (!b.isActive) return false
       // Filtra pelo mês selecionado via dueDay — a conta vence nesse mês
       const [y, m] = month.split("-").map(Number)
       const dueDate = `${y}-${String(m).padStart(2,"0")}-${String(b.dueDay).padStart(2,"0")}`
@@ -654,7 +654,9 @@ export function TransactionsList() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <p className="font-semibold text-red-500">-{formatCurrency(bill.amount)}</p>
+                      <p className={`font-semibold ${bill.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                        {bill.type === "income" ? "+" : "-"}{formatCurrency(bill.amount)}
+                      </p>
                       <ConfirmFixedBillButton bill={bill} />
                     </div>
                   </div>
