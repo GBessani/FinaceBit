@@ -143,6 +143,7 @@ export function TransactionsList() {
     isLoaded,
     addCCPurchase,
     addFixedBill,
+    deleteFixedBill,
     payCCInvoice,
     creditCards,
   } = useFinance()
@@ -155,6 +156,7 @@ export function TransactionsList() {
   const [showOFXImport, setShowOFXImport] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleteBillId, setDeleteBillId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState<"all" | TransactionType>("all")
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -653,11 +655,18 @@ export function TransactionsList() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <p className={`font-semibold ${bill.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
                         {bill.type === "income" ? "+" : "-"}{formatCurrency(bill.amount)}
                       </p>
                       <ConfirmFixedBillButton bill={bill} />
+                      <button
+                        onClick={() => setDeleteBillId(bill.id)}
+                        title="Excluir conta fixa"
+                        className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1194,6 +1203,14 @@ export function TransactionsList() {
       {showOFXImport && (
         <OFXImportModal onClose={() => setShowOFXImport(false)} />
       )}
+
+      <DeleteConfirm
+        isOpen={!!deleteBillId}
+        title="Excluir conta fixa?"
+        description="A conta fixa deixará de gerar novos lançamentos. Parcelas de cartão já geradas na fatura permanecem."
+        onConfirm={() => { deleteBillId && deleteFixedBill(deleteBillId); setDeleteBillId(null) }}
+        onCancel={() => setDeleteBillId(null)}
+      />
 
       <DeleteConfirm
         isOpen={!!deleteId}
