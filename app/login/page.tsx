@@ -81,7 +81,7 @@ function LoginContent() {
     }
     setLoading(true)
     setFeedback(null)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -94,9 +94,16 @@ function LoginContent() {
     })
     if (error) {
       setFeedback({ type: "error", message: error.message })
-    } else {
-      setFeedback({ type: "success", message: "Cadastro realizado! Verifique seu e-mail para confirmar a conta." })
+      setLoading(false)
+      return
     }
+    // Se a confirmação de e-mail está desativada, a sessão já vem ativa → entra direto.
+    if (data.session) {
+      router.push("/")
+      return
+    }
+    // Caso contrário, confirmação por e-mail ainda é exigida.
+    setFeedback({ type: "success", message: "Cadastro realizado! Verifique seu e-mail para confirmar a conta." })
     setLoading(false)
   }
 
