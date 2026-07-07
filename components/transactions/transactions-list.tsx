@@ -157,6 +157,8 @@ export function TransactionsList() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState<"all" | TransactionType>("all")
+  const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [pageSize, setPageSize] = useState(30)
   const [visibleCount, setVisibleCount] = useState(30)
 
   useEffect(() => {
@@ -170,8 +172,8 @@ export function TransactionsList() {
   }, [])
 
   useEffect(() => {
-    setVisibleCount(30)
-  }, [activeTab, search, filterType, selectedMonth])
+    setVisibleCount(pageSize)
+  }, [activeTab, search, filterType, filterCategory, selectedMonth, pageSize])
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>()
@@ -226,6 +228,7 @@ export function TransactionsList() {
   const { pending, overdue, completed } = useMemo(() => {
     const txs = data.transactions.filter(t => {
       if (filterType !== "all" && t.type !== filterType) return false
+      if (filterCategory !== "all" && t.categoryId !== filterCategory) return false
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       if (selectedMonth && !t.date.startsWith(selectedMonth)) return false
       return true
@@ -235,7 +238,7 @@ export function TransactionsList() {
       overdue:   txs.filter(t => t.status === "pending" && t.date < todayStr),
       completed: txs.filter(t => t.status !== "pending").sort((a, b) => b.date.localeCompare(a.date)),
     }
-  }, [data.transactions, search, filterType, todayStr, selectedMonth])
+  }, [data.transactions, search, filterType, filterCategory, todayStr, selectedMonth])
 
   // ─── Form state ──────────────────────────────────────────────────────────────
 
@@ -567,6 +570,18 @@ export function TransactionsList() {
             <option value="expense">Despesas</option>
             <option value="transfer">Transferências</option>
           </select>
+          <select
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+            className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none max-w-[160px]"
+          >
+            <option value="all">Todas categorias</option>
+            {data.categories
+              .filter(c => filterType === "all" || c.type === filterType)
+              .map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+          </select>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -762,11 +777,33 @@ export function TransactionsList() {
           ))}
           {hasMore && (
             <button
-              onClick={() => setVisibleCount(c => c + 30)}
+              onClick={() => setVisibleCount(c => c + pageSize)}
               className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-xl hover:bg-secondary transition-colors"
             >
               Mostrar mais ({currentList.length - visibleCount} restantes)
             </button>
+          )}
+
+          {/* Seletor de itens por página + contador */}
+          {currentList.length > 0 && (
+            <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+              <span>
+                Mostrando {Math.min(visibleCount, currentList.length)} de {currentList.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <span>Por página:</span>
+                <select
+                  value={pageSize}
+                  onChange={e => setPageSize(Number(e.target.value))}
+                  className="px-2 py-1 border border-border rounded-lg bg-background focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={30}>30</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
           )}
         </div>
       )}
