@@ -264,8 +264,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       )
       if (alreadyExists) continue
 
-      // Cria a purchase + installment do mês
-      const { data: pRow } = await supabase.from("credit_card_purchases").insert({
+      // Cria a purchase + installment do mês.
+      // A UNIQUE (user_id, notes, fixed_bill_month) é a proteção final contra
+      // duplicação: se duas execuções concorrentes passarem pelo alreadyExists,
+      // o banco rejeita a segunda com erro 23505 (unique_violation) — que
+      // tratamos silenciosamente como "já gerado".
+      const { data: pRow, error: pErr } = await supabase.from("credit_card_purchases").insert({
         user_id: userId,
         credit_card_id: bill.credit_card_id,
         description: bill.description,
@@ -273,8 +277,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         installments: 1,
         category_id: bill.category_id ?? null,
         purchase_date: localDateStr(),
+        fixed_bill_month: billActiveMonth,
         notes: `fixed_bill:${bill.id}`,
       }).select().single()
+
+      if (pErr) {
+        // 23505 = violação da UNIQUE → outra execução já gerou. Ignora.
+        if (pErr.code !== "23505") console.error("Erro ao gerar conta fixa:", pErr)
+        continue
+      }
 
       if (pRow) {
         await supabase.from("credit_card_installments").insert({
