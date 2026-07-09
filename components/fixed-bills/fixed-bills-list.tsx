@@ -104,7 +104,7 @@ export function FixedBillsList() {
       type,
       categoryId,
       dueDay: parseInt(dueDay),
-      recurrence,
+      recurrence: wallet === "credit_card" ? "monthly" : recurrence,
       isActive: editingBill?.isActive ?? true,
       notes: notes || undefined,
       wallet,
@@ -201,7 +201,11 @@ export function FixedBillsList() {
                 </div>
                 <div className="space-y-2">
                   <Label>Recorrência</Label>
-                  <Select value={recurrence} onValueChange={(v: RecurrenceType) => setRecurrence(v)}>
+                  <Select
+                    value={recurrence}
+                    onValueChange={(v: RecurrenceType) => setRecurrence(v)}
+                    disabled={wallet === "credit_card"}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -212,6 +216,11 @@ export function FixedBillsList() {
                       <SelectItem value="yearly">Anual</SelectItem>
                     </SelectContent>
                   </Select>
+                  {wallet === "credit_card" && (
+                    <p className="text-xs text-muted-foreground">
+                      Contas no cartão são sempre mensais.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -224,7 +233,7 @@ export function FixedBillsList() {
                       <button
                         key={w}
                         type="button"
-                        onClick={() => { setWallet(w); if (w !== "credit_card") setCreditCardId("") }}
+                        onClick={() => { setWallet(w); if (w === "credit_card") setRecurrence("monthly"); else setCreditCardId("") }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                           wallet === w
                             ? "bg-primary text-primary-foreground border-primary"
