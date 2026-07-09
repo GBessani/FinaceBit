@@ -248,6 +248,8 @@ export function TransactionsList() {
   const [isFixed, setIsFixed] = useState(false)
   const [fixedDueDay, setFixedDueDay] = useState("1")
   const [fixedRecurrence, setFixedRecurrence] = useState<RecurrenceType>("monthly")
+  const [fixedWallet, setFixedWallet] = useState<"digital" | "cash" | "credit_card">("digital")
+  const [fixedCardId, setFixedCardId] = useState("")
   const [form, setForm] = useState<{
     type: TransactionType
     description: string
@@ -275,6 +277,8 @@ export function TransactionsList() {
     setWalletMode("digital")
     setIsFixed(false)
     setFixedDueDay("1")
+    setFixedWallet("digital")
+    setFixedCardId("")
     setFixedRecurrence("monthly")
     setForm({
       type: "expense",
@@ -366,11 +370,7 @@ export function TransactionsList() {
       if (amtErrF) { toast.error(amtErrF); return }
       const dueDay = parseInt(fixedDueDay)
       if (!fixedDueDay || dueDay < 1 || dueDay > 31) { toast.error("Dia de vencimento inválido"); return }
-      const wm = walletMode as WalletMode
-      const billWallet: "digital" | "cash" | "credit_card" =
-        wm === "card" ? "credit_card" : wm as "digital" | "cash"
-      const billCardId = wm === "card" ? form.cardId : undefined
-      if (billWallet === "credit_card" && !billCardId) { toast.error("Selecione um cartão"); return }
+      if (fixedWallet === "credit_card" && !fixedCardId) { toast.error("Selecione um cartão"); return }
       await addFixedBill({
         id: crypto.randomUUID(),
         description: form.description,
@@ -378,11 +378,12 @@ export function TransactionsList() {
         type: form.type as "income" | "expense",
         categoryId: form.categoryId,
         dueDay,
-        recurrence: fixedRecurrence,
+        // Conta fixa de cartão é sempre mensal (geração automática só sabe mensal)
+        recurrence: fixedWallet === "credit_card" ? "monthly" : fixedRecurrence,
         isActive: true,
         notes: undefined,
-        wallet: billWallet,
-        creditCardId: billCardId,
+        wallet: fixedWallet,
+        creditCardId: fixedWallet === "credit_card" ? fixedCardId : undefined,
       })
       toast.success("Conta fixa criada!")
       resetForm()
@@ -888,7 +889,7 @@ export function TransactionsList() {
               )}
 
               {/* ── Switch: É conta fixa? (só para criação, não edição) ── */}
-              {!editingTx && walletMode !== "card" && (
+              {!editingTx && (
                 <button
                   type="button"
                   onClick={() => setIsFixed(f => !f)}
@@ -909,32 +910,79 @@ export function TransactionsList() {
               )}
 
               {/* ── Campos extras de conta fixa ── */}
-              {isFixed && !editingTx && walletMode !== "card" && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Dia de vencimento</label>
-                    <input
-                      type="number"
-                      min="1" max="31"
-                      value={fixedDueDay}
-                      onChange={e => setFixedDueDay(e.target.value)}
-                      inputMode="numeric"
-                      className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    />
+              {isFixed && !editingTx && (
+                <div className="space-y-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Dia de vencimento</label>
+                      <input
+                        type="number"
+                        min="1" max="31"
+                        value={fixedDueDay}
+                        onChange={e => setFixedDueDay(e.target.value)}
+                        inputMode="numeric"
+                        className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Recorrência</label>
+                      <select
+                        value={fixedWallet === "credit_card" ? "monthly" : fixedRecurrence}
+                        onChange={e => setFixedRecurrence(e.target.value as RecurrenceType)}
+                        disabled={fixedWallet === "credit_card"}
+                        className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-60"
+                      >
+                        <option value="monthly">Mensal</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="biweekly">Quinzenal</option>
+                        <option value="yearly">Anual</option>
+                      </select>
+                    </div>
                   </div>
+
+                  {/* Cobrado em — só oferece cartão para despesas */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Recorrência</label>
-                    <select
-                      value={fixedRecurrence}
-                      onChange={e => setFixedRecurrence(e.target.value as RecurrenceType)}
-                      className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    >
-                      <option value="monthly">Mensal</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="biweekly">Quinzenal</option>
-                      <option value="yearly">Anual</option>
-                    </select>
+                    <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Cobrado em</label>
+                    <div className="flex gap-2">
+                      {(form.type === "expense"
+                        ? (["digital", "cash", "credit_card"] as const)
+                        : (["digital", "cash"] as const)
+                      ).map(w => (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => { setFixedWallet(w); if (w !== "credit_card") setFixedCardId("") }}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            fixedWallet === w
+                              ? "bg-purple-500 text-white border-purple-500"
+                              : "border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/40"
+                          }`}
+                        >
+                          {w === "digital" ? "💳 Digital" : w === "cash" ? "💵 Físico" : "🔄 Cartão"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Seletor de cartão */}
+                  {fixedWallet === "credit_card" && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-purple-700 dark:text-purple-300">Cartão</label>
+                      <select
+                        value={fixedCardId}
+                        onChange={e => setFixedCardId(e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-purple-200 dark:border-purple-700 rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-purple-400"
+                      >
+                        <option value="">Selecione o cartão...</option>
+                        {creditCards.filter(c => c.isActive).map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-purple-600/70 dark:text-purple-400/70">
+                        A parcela será gerada automaticamente na fatura todo mês.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1084,7 +1132,7 @@ export function TransactionsList() {
                       <button
                         key={val}
                         type="button"
-                        onClick={() => setForm(p => ({ ...p, type: val, categoryId: "" }))}
+                        onClick={() => { setForm(p => ({ ...p, type: val, categoryId: "" })); if (val === "income" && fixedWallet === "credit_card") { setFixedWallet("digital"); setFixedCardId("") } }}
                         className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${
                           form.type === val ? "bg-card shadow" : "text-muted-foreground"
                         }`}
