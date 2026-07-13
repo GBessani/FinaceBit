@@ -127,21 +127,29 @@ export function MonthlyChart({ selectedMonth }: { selectedMonth?: string } = {})
     })
 
     // Contas fixas → previsão no mês atual e futuros (não no passado).
-    // No mês atual, só entra se ainda NÃO houver transação confirmada dela
-    // (confirmar uma conta fixa cria uma transaction com nota fixed_bill_confirmed:<id>).
+    // No mês atual, só entra se ainda NÃO houver transação confirmada dela.
+    // Reconhece dois formatos de nota de confirmação:
+    //   - novo: "fixed_bill_confirmed:<id>"  → casa por ID (preciso)
+    //   - antigo: "Confirmado de conta fixa" → casa por descrição (retrocompat)
     const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-    const confirmedFixedThisMonth = new Set(
-      data.transactions
-        .filter(t => t.status === "completed" && t.notes?.startsWith("fixed_bill_confirmed:") && t.date.startsWith(nowKey))
-        .map(t => t.notes!.replace("fixed_bill_confirmed:", ""))
-    )
+    const confirmedById = new Set<string>()
+    const confirmedByDescription = new Set<string>()
+    data.transactions
+      .filter(t => t.status === "completed" && t.date.startsWith(nowKey))
+      .forEach(t => {
+        if (t.notes?.startsWith("fixed_bill_confirmed:")) {
+          confirmedById.add(t.notes.replace("fixed_bill_confirmed:", ""))
+        } else if (t.notes === "Confirmado de conta fixa") {
+          confirmedByDescription.add(t.description)
+        }
+      })
 
     data.fixedBills.filter(b => b.isActive).forEach(b => {
       Object.keys(months).forEach(key => {
         // Passado não recebe previsão de conta fixa
         if (key < nowKey) return
-        // No mês atual, pula se a conta fixa já foi confirmada (casa por ID)
-        if (key === nowKey && confirmedFixedThisMonth.has(b.id)) return
+        // No mês atual, pula se a conta fixa já foi confirmada (por ID ou descrição)
+        if (key === nowKey && (confirmedById.has(b.id) || confirmedByDescription.has(b.description))) return
         if (b.type === "income") months[key].forecastIncome += b.amount
         else months[key].forecastExpense += b.amount
       })
@@ -362,9 +370,24 @@ function MonthSummaryModal({ month, data, onClose }: MonthSummaryModalProps) {
     t => t.date.startsWith(monthKey) && t.status === "pending"
   ).sort((a, b) => b.amount - a.amount)
 
-  // 2. Contas fixas ativas (despesas e receitas)
-  const fixedExpenses = data.fixedBills.filter(b => b.isActive && b.type === "expense")
-  const fixedIncome   = data.fixedBills.filter(b => b.isActive && b.type === "income")
+  // 2. Contas fixas ativas — exclui as já confirmadas neste mês.
+  //    Reconhece os dois formatos de nota (novo por ID, antigo por descrição).
+  const confirmedById = new Set<string>()
+  const confirmedByDescription = new Set<string>()
+  data.transactions
+    .filter(t => t.status === "completed" && t.date.startsWith(monthKey))
+    .forEach(t => {
+      if (t.notes?.startsWith("fixed_bill_confirmed:")) {
+        confirmedById.add(t.notes.replace("fixed_bill_confirmed:", ""))
+      } else if (t.notes === "Confirmado de conta fixa") {
+        confirmedByDescription.add(t.description)
+      }
+    })
+  const isConfirmed = (b: import("@/lib/types").FixedBill) =>
+    confirmedById.has(b.id) || confirmedByDescription.has(b.description)
+
+  const fixedExpenses = data.fixedBills.filter(b => b.isActive && b.type === "expense" && !isConfirmed(b))
+  const fixedIncome   = data.fixedBills.filter(b => b.isActive && b.type === "income" && !isConfirmed(b))
 
   // 3. Faturas de cartão cujo dueMonth bate com o mês do modal
   const dueMonth = monthKey + "-01"
