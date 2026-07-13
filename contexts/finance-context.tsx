@@ -205,7 +205,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       supabase.from("budgets").select("*").eq("user_id", userId),
       supabase.from("credit_card_purchases").select("*").eq("user_id", userId).order("purchase_date", { ascending: false }),
       supabase.from("credit_card_installments").select("*, credit_card_purchases(*)").eq("user_id", userId),
-      supabase.from("profiles").select("initial_balance").eq("id", userId).single(),
+      supabase.from("profiles").select("initial_balance").eq("id", userId).maybeSingle(),
     ])
 
     setData({

@@ -49,7 +49,7 @@ export default function RelatoriosPage() {
   // Calcula datas de início e fim baseado no filtro
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
-    const end = now.toISOString().split("T")[0]
+    const end = localDateStr(now)
 
     // Se personalizado mas datas não preenchidas, usa 12 meses
     if (preset === "custom") {
@@ -57,14 +57,14 @@ export default function RelatoriosPage() {
         return { startDate: customStart, endDate: customEnd }
       }
       const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-      return { startDate: start.toISOString().split("T")[0], endDate: end }
+      return { startDate: localDateStr(start), endDate: end }
     }
     if (preset === "all") {
       return { startDate: "2000-01-01", endDate: end }
     }
     const months = parseInt(preset)
     const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
-    return { startDate: start.toISOString().split("T")[0], endDate: end }
+    return { startDate: localDateStr(start), endDate: end }
   }, [preset, customStart, customEnd])
 
   // Filtra transações pelo período.

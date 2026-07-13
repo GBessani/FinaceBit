@@ -112,7 +112,7 @@ function ConfirmFixedBillButton({ bill }: { bill: FixedBill }) {
         date: localDateStr(),
         wallet: (bill.wallet === "credit_card" ? "digital" : bill.wallet) as "digital" | "cash",
         status: "completed",
-        notes: "Confirmado de conta fixa",
+        notes: `fixed_bill_confirmed:${bill.id}`,
       })
       toast.success(`${bill.description} confirmada!`)
     } finally {
@@ -230,7 +230,8 @@ export function TransactionsList() {
   const { pending, overdue, completed } = useMemo(() => {
     const txs = data.transactions.filter(t => {
       if (filterType !== "all" && t.type !== filterType) return false
-      if (filterCategory !== "all" && t.categoryId !== filterCategory) return false
+      if (filterCategory === "none" && t.categoryId) return false
+      if (filterCategory !== "all" && filterCategory !== "none" && t.categoryId !== filterCategory) return false
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       if (selectedMonth && !t.date.startsWith(selectedMonth)) return false
       return true
@@ -597,6 +598,7 @@ export function TransactionsList() {
           className="flex-1 min-w-0 px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
         >
           <option value="all">Todas categorias</option>
+          <option value="none">Sem categoria</option>
           {data.categories
             .filter(c => filterType === "all" || c.type === filterType)
             .map(c => (

@@ -45,6 +45,29 @@ export interface OFXParseResult {
  * Extrai apenas os 8 dígitos iniciais — sem conversão de fuso — para preservar
  * a data local informada pelo banco (que já considera o fuso do cliente).
  */
+/**
+ * Converte o valor de uma transação OFX para número, tratando os dois formatos
+ * comuns: americano (1234.56 ou 1,234.56) e brasileiro (1.234,56).
+ * A regra: se houver vírgula E ponto, o último separador é o decimal.
+ */
+function parseOfxAmount(raw: unknown): number {
+  const s = String(raw ?? "0").trim()
+  if (!s) return 0
+  const hasComma = s.includes(",")
+  const hasDot = s.includes(".")
+  if (hasComma && hasDot) {
+    // O separador que aparecer por último é o decimal
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      // formato BR: 1.234,56 → remove pontos de milhar, vírgula vira ponto
+      return parseFloat(s.replace(/\./g, "").replace(",", "."))
+    }
+    // formato US: 1,234.56 → remove vírgulas de milhar
+    return parseFloat(s.replace(/,/g, ""))
+  }
+  // Só um separador: se for vírgula, é decimal (padrão BR sem milhar)
+  return parseFloat(s.replace(",", "."))
+}
+
 function ofxDateToLocal(dtPosted: string): string {
   const digits = dtPosted.replace(/\[.*\]/, "").replace(/\s/g, "")
   const y = digits.substring(0, 4)
@@ -96,7 +119,7 @@ export async function parseOFX(content: string): Promise<OFXParseResult> {
       : rawTxs != null ? [rawTxs] : []
 
     const transactions: OFXTransaction[] = txArray.map((tx: any) => {
-      const rawAmount = parseFloat(String(tx.TRNAMT ?? "0").replace(",", "."))
+      const rawAmount = parseOfxAmount(tx.TRNAMT)
       const absAmount = Math.abs(rawAmount)
       const trnType   = String(tx.TRNTYPE ?? "OTHER").toUpperCase()
       const type      = resolveType(trnType, rawAmount)
@@ -122,7 +145,7 @@ export async function parseOFX(content: string): Promise<OFXParseResult> {
       accountType: acct?.ACCTTYPE,
       startDate:   tranList?.DTSTART ? ofxDateToLocal(tranList.DTSTART) : undefined,
       endDate:     tranList?.DTEND   ? ofxDateToLocal(tranList.DTEND)   : undefined,
-      balance:     ledger?.BALAMT    ? parseFloat(String(ledger.BALAMT)) : undefined,
+      balance:     ledger?.BALAMT    ? parseOfxAmount(ledger.BALAMT) : undefined,
     }
   } catch (err: any) {
     return {

@@ -4,7 +4,6 @@ import { useState } from "react"
 import { DeleteConfirm } from "@/components/ui/delete-confirm"
 import { useFinance } from "@/contexts/finance-context"
 import { Category } from "@/lib/types"
-import { generateId } from "@/lib/utils"
 import { CategoryIcon, availableIcons, availableEmojis } from "@/components/categories/category-icon"
 import { Plus, Trash2, X, Pencil } from "lucide-react"
 
@@ -161,7 +160,7 @@ function CategoryForm({ type, initial, onClose, onSubmit }: CategoryFormProps) {
     if (!name) return
 
     onSubmit({
-      id: initial?.id ?? generateId(),
+      id: initial?.id ?? crypto.randomUUID(),
       name,
       icon,
       color,
