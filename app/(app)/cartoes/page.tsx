@@ -275,32 +275,52 @@ export default function CartoesPage() {
                         const monthInst = allInstallments.filter(i => i.dueMonth === month)
                         const [y, m] = month.split("-").map(Number)
                         const label = new Date(y, m-1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+
+                        // Subagrupa por data da compra (purchaseDate), mais recente primeiro
+                        const byDate = new Map<string, typeof monthInst>()
+                        for (const inst of monthInst) {
+                          const d = inst.purchase?.purchaseDate ?? "0000-00-00"
+                          if (!byDate.has(d)) byDate.set(d, [])
+                          byDate.get(d)!.push(inst)
+                        }
+                        const sortedDates = Array.from(byDate.keys()).sort((a, b) => b.localeCompare(a))
+
                         return (
                           <div key={month}>
                             <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5 capitalize">{label}</p>
-                            {monthInst.map(inst => (
-                              <div key={inst.id} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg mb-1">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium truncate">
-                                    {inst.purchase?.description ?? "Compra"}
-                                    {(inst.purchase?.installments ?? 1) > 1 && (
-                                      <span className="text-xs text-muted-foreground ml-1">
-                                        ({inst.installmentNum}/{inst.purchase?.installments})
-                                      </span>
-                                    )}
-                                  </p>
+                            {sortedDates.map(date => {
+                              const dateLabel = date === "0000-00-00"
+                                ? "Sem data"
+                                : (() => { const [dy, dm, dd] = date.split("-").map(Number); return new Date(dy, dm-1, dd).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) })()
+                              return (
+                                <div key={date} className="mb-2">
+                                  <p className="text-[11px] text-muted-foreground/70 mb-1 ml-1">{dateLabel}</p>
+                                  {byDate.get(date)!.map(inst => (
+                                    <div key={inst.id} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg mb-1">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">
+                                          {inst.purchase?.description ?? "Compra"}
+                                          {(inst.purchase?.installments ?? 1) > 1 && (
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              ({inst.installmentNum}/{inst.purchase?.installments})
+                                            </span>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <p className="text-sm font-semibold text-red-500">-{formatCurrency(inst.amount)}</p>
+                                        {inst.purchaseId && inst.installmentNum === 1 && (
+                                          <button onClick={() => setDeletePurchaseId(inst.purchaseId)}
+                                            className="p-1 hover:bg-secondary rounded transition-colors">
+                                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <p className="text-sm font-semibold text-red-500">-{formatCurrency(inst.amount)}</p>
-                                  {inst.purchaseId && inst.installmentNum === 1 && (
-                                    <button onClick={() => setDeletePurchaseId(inst.purchaseId)}
-                                      className="p-1 hover:bg-secondary rounded transition-colors">
-                                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         )
                       })}
